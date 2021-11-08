@@ -1,0 +1,22 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "description": "Commonly used scripts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pangolindex/scripts.git"
+  },
+  "author": "bmino",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pangolindex/scripts/issues"
+  },
+  "homepage": "https://github.com/pangolindex/scripts#readme",
+  "dependencies": {
+    "web3": "^1.6.0"
+  }
+}
