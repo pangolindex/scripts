@@ -6,6 +6,8 @@ const ADDRESS = require('../../config/address.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+let startingAvax;
+let endingAvax;
 
 
 // Change These Variables
@@ -21,7 +23,16 @@ const IDs = createArrayOfNumbers(265, 266); // Note: Range is inclusive
     const multiContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, ADDRESS.PANGOLIN_MULTISIG_ADDRESS);
     let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
 
+    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
+
     for (const id of IDs) {
+
+        const { destination, value, data, executed } = await multiContract.methods.transactions(id).call();
+        if (executed) {
+            console.log(`Skipping #${id} due to prior execution`);
+            continue;
+        }
 
         const tx = multiContract.methods.executeTransaction(id);
 
@@ -44,8 +55,13 @@ const IDs = createArrayOfNumbers(265, 266); // Note: Range is inclusive
         }
     }
 })()
-  .catch(console.error)
-  .finally(process.exit);
+    .catch(console.error)
+    .finally(async () => {
+        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
+        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        process.exit(0);
+    });
 
 function createArrayOfNumbers(a, b) {
     const arr = [];
