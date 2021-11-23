@@ -10,26 +10,34 @@ web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 // Change These Variables
 // --------------------------------------------------
-const tokenAddress = ADDRESS.WAVAX;
-const spenderAddress = '0x0000000000000000000000000000000000000000';
-const allowanceAmount = '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+const farms = [
+    {
+        pgl: '0x0000000000000000000000000000000000000000',
+        weight: 100 // 1x farm
+    }
+];
 // --------------------------------------------------
 
 
+const pglAddresses = farms.map(farm => farm.pgl);
+const allocationPoints = farms.map(farm => farm.weight);
+const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS); // Typically zero address
+
 /*
- * This is an example of approving an ERC20 token to be spent by the multisig
+ * This is an example of adding farms via the multisig
  */
 (async () => {
     const multiContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, ADDRESS.PANGOLIN_MULTISIG_ADDRESS);
-    const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
+    const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS);
 
-    const tx = tokenContract.methods.approve(
-        spenderAddress,
-        allowanceAmount
+    const tx = miniChefContract.methods.addPools(
+        allocationPoints,
+        pglAddresses,
+        rewarderAddresses,
     );
 
     const multiTX = multiContract.methods.submitTransaction(
-        tokenContract._address,
+        miniChefContract._address,
         0,
         tx.encodeABI(),
     );
