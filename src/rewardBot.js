@@ -46,6 +46,7 @@ const main = async () => {
             } catch (error) {
                 console.error(`Error attempting claimAndDistribute()`);
                 console.error(error);
+                await sleep(1000);
             }
         }
     }
