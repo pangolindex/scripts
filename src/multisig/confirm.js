@@ -12,8 +12,10 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const IDs = createArrayOfNumbers(265, 266); // Note: Range is inclusive
+const IDs = createArrayOfNumbers(13, 13); // Note: Range is inclusive
 const includeExtraGas = true;
+
+const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
 // --------------------------------------------------
 
 
@@ -21,7 +23,7 @@ const includeExtraGas = true;
  * This is an example of confirming a set of multisig transactions
  */
 (async () => {
-    const multiContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, ADDRESS.PANGOLIN_MULTISIG_ADDRESS);
+    const multiContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
     let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
 
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
