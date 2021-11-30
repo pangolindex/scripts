@@ -7,12 +7,12 @@ const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
+// Constants
+const ONE_DAY = web3.utils.toBN(86400 * 1000);
+const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, ADDRESS.PANGOLIN_TREASURY_VESTER);
+const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, ADDRESS.PANGOLIN_TREASURY_VESTER_PROXY);
+
 const main = async () => {
-    const ONE_DAY = web3.utils.toBN(86400 * 1000);
-
-    const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, ADDRESS.PANGOLIN_TREASURY_VESTER);
-    const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, ADDRESS.PANGOLIN_TREASURY_VESTER_PROXY);
-
     while (true) {
         // Gather info
         const fundsLastAvailableBlockTime = web3.utils.toBN(await treasuryVester.methods.lastUpdate().call());
@@ -24,7 +24,7 @@ const main = async () => {
         console.log(`Detected next available vesting at ${new Date(fundsNextAvailableEpochTime.toNumber()).toLocaleString('en-US')}`);
 
         // Wait for available funds
-        while (fundsNextAvailableEpochTime.gt(now())) {
+        while (fundsNextAvailableEpochTime.gte(now())) {
             const delay = fundsNextAvailableEpochTime.sub(now());
             await sleep(delay);
         }
@@ -32,21 +32,22 @@ const main = async () => {
         // Claim and distribute funds
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
-                console.log('Calculating parameters for claimAndDistribute()');
+                console.log('Calculating parameters for claimAndDistribute() ...');
                 const tx = treasuryVesterProxy.methods.claimAndDistribute();
-                const gasPrice = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+                const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+                const gasPrice = await web3.eth.getGasPrice();
 
-                console.log('Sending claimAndDistribute()');
+                console.log('Sending claimAndDistribute() ...');
                 const receipt = await tx.send({
                     from: CONFIG.WALLET.ADDRESS,
-                    gas: '2500000',
+                    gas,
                     gasPrice,
                 });
-                console.log(`Transaction hash: ${receipt.transactionHash}`);
+                console.log(`Transaction hash: ${receipt.transactionHash} (${snowtraceLink(receipt.transactionHash)}`);
             } catch (error) {
                 console.error(`Error attempting claimAndDistribute()`);
-                console.error(error);
-                await sleep(1000);
+                console.error(error.message);
+                await sleep(web3.utils.toBN(1000));
             }
         }
     }
@@ -58,6 +59,10 @@ main()
         console.error(error);
         process.exit(1);
     });
+
+function snowtraceLink(hash) {
+    return `https://snowtrace.io/tx/${hash}`;
+}
 
 function sleep(ms) {
     if (ms.isNeg()) return;
