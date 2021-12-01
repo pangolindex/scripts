@@ -8,7 +8,8 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 // Constants
-const ONE_DAY = web3.utils.toBN(86400 * 1000);
+const ONE_SECOND = web3.utils.toBN(1000);
+const ONE_DAY = ONE_SECOND.muln(86400);
 const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, ADDRESS.PANGOLIN_TREASURY_VESTER);
 const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, ADDRESS.PANGOLIN_TREASURY_VESTER_PROXY);
 
@@ -19,7 +20,7 @@ const main = async () => {
 
         // Adjust block time to epoch time
         const fundsLastAvailableEpochTime = fundsLastAvailableBlockTime.muln(1000);
-        const fundsNextAvailableEpochTime = fundsLastAvailableEpochTime.add(ONE_DAY); // Vesting cliff
+        const fundsNextAvailableEpochTime = fundsLastAvailableEpochTime.add(ONE_DAY).add(ONE_SECOND);
 
         console.log(`Detected next available vesting at ${new Date(fundsNextAvailableEpochTime.toNumber()).toLocaleString('en-US')}`);
 
