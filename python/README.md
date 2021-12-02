@@ -61,3 +61,18 @@ This script get all pools with PNG as pair and save in [pools.json](src/constant
 
 ## Run 
 `python get_png_pools.py`
+
+# swap_fee.py
+This script generates swap fee chart and exports to a CSV
+
+## Run 
+`python swap_fee.py`
+
+## View
+You can see in the browser, the URL will be available on the console
+
+In this case it is http://127.0.0.1:8050/
+
+![Image 4](https://i.imgur.com/InLxbLj.png)
+
+![Image 5](https://i.imgur.com/ERuKrrC.png)
