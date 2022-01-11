@@ -34,6 +34,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
         console.log(`pid #${pid}: (${token0Symbol}-${token1Symbol}) weight ${poolInfos[pid].allocPoint}`);
         table.push({
             pid: pid,
+            pgl: pgl.toLowerCase(),
             token0: token0Symbol,
             token1: token1Symbol,
             weight: poolInfos[pid].allocPoint,
