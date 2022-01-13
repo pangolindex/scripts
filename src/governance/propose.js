@@ -3,6 +3,7 @@ const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 
+const fs = require('fs');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -46,10 +47,11 @@ of the totally new Pangolin UI.
 We will transfer 2m PNG from CommunityTreasury to the Pangolin multisig.`
     );
 
-    console.log(`Encoding bytecode ...`)
+    console.log(`Encoding bytecode ...`);
     const bytecode = tx.encodeABI();
-    console.log(`Encoded bytecode:`)
-    console.log(bytecode);
+    const fileOutput = './bytecode.txt';
+    fs.writeFileSync(fileOutput, bytecode);
+    console.log(`Encoded bytecode to ${fileOutput}`);
     console.log();
 
     console.log(`Creating multisig transaction ...`);

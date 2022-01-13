@@ -26,3 +26,5 @@ config/config.js
 
 # Python
 __pycache__
+
+bytecode.txt

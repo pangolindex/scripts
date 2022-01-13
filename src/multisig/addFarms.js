@@ -3,6 +3,7 @@ const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 
+const fs = require('fs');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -36,10 +37,17 @@ const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRES
         rewarderAddresses,
     );
 
+    console.log(`Encoding bytecode ...`);
+    const bytecode = tx.encodeABI();
+    const fileOutput = './bytecode.txt';
+    fs.writeFileSync(fileOutput, bytecode);
+    console.log(`Encoded bytecode to ${fileOutput}`);
+    console.log();
+
     const multiTX = multiContract.methods.submitTransaction(
         miniChefContract._address,
         0,
-        tx.encodeABI(),
+        bytecode,
     );
 
     const receipt = await multiTX.send({
