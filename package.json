@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "fork": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc",
     "rewarder": "node src/rewardBot.js"
   },
   "repository": {
@@ -18,6 +19,8 @@
   },
   "homepage": "https://github.com/pangolindex/scripts#readme",
   "dependencies": {
+    "abi-decoder": "^2.4.0",
+    "hardhat": "^2.7.0",
     "web3": "^1.6.0"
   }
 }
