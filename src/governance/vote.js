@@ -3,6 +3,8 @@ const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 
+const fs = require('fs');
+const path = require('path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -24,15 +26,17 @@ const VOTE = true;
       VOTE,
     );
 
+    console.log(`Encoding bytecode ...`);
     const bytecode = tx.encodeABI();
-    console.log();
-    console.log(bytecode);
+    const fileOutput = `./${path.basename(__filename, '.js')}-bytecode.txt`;
+    fs.writeFileSync(fileOutput, bytecode);
+    console.log(`Encoded bytecode to ${fileOutput}`);
     console.log();
 
     const multiTX = multisig.methods.submitTransaction(
         gov._address,
         0,
-        bytecode
+        bytecode,
     );
 
     console.log(`Submitting tx ...`);
