@@ -4,8 +4,8 @@ const ABI = require('../../config/abi.json');
 
 // Change These Variables
 // --------------------------------------------------
-const bytecode = '0x0';
 const destinationABI = ABI.ROUTER;
+const bytecode = '0x0';
 // --------------------------------------------------
 
 
