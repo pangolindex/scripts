@@ -26,15 +26,17 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
         const token0Contract = new web3.eth.Contract(ABI.TOKEN, token0);
         const token1Contract = new web3.eth.Contract(ABI.TOKEN, token1);
 
-        const [token0Symbol, token1Symbol] = await Promise.all([
+        const [token0Symbol, token1Symbol, rewarder] = await Promise.all([
             token0Contract.methods.symbol().call(),
             token1Contract.methods.symbol().call(),
+            miniChefContract.methods.rewarder(pid).call(),
         ]);
 
         console.log(`pid #${pid}: (${token0Symbol}-${token1Symbol}) weight ${poolInfos[pid].allocPoint}`);
         table.push({
             pid: pid,
             pgl: pgl.toLowerCase(),
+            rewarder: rewarder,
             token0: token0Symbol,
             token1: token1Symbol,
             weight: poolInfos[pid].allocPoint,
