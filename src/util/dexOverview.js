@@ -1,11 +1,12 @@
 const ABI = require('../../config/abi.json');
+const ADDRESS = require('../../config/address.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 
 
 // Change These Variables
 // ---------------------------------------------------------------
-const factoryAddress = '0x0000000000000000000000000000000000000000';
+const factoryAddress = ADDRESS.PANGOLIN_FACTORY;
 // ---------------------------------------------------------------
 
 

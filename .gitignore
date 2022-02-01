@@ -28,3 +28,5 @@ config/config.js
 __pycache__
 
 *-bytecode.txt
+
+src/**/*sandbox*.js
