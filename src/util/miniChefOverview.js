@@ -12,6 +12,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
 
     const lpTokens = await miniChefContract.methods.lpTokens().call();
     const poolInfos = await miniChefContract.methods.poolInfos().call();
+    let totalAllocPoints = 0;
 
     const table = [];
 
@@ -41,9 +42,13 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
             token1: token1Symbol,
             weight: poolInfos[pid].allocPoint,
         });
+
+        totalAllocPoints += parseInt(poolInfos[pid].allocPoint);
+
         pid++;
     }
 
     console.table(table);
+    console.log(`Total alloc points: ${totalAllocPoints}`);
 
 })();
