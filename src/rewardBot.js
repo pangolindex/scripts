@@ -36,13 +36,14 @@ const main = async () => {
                 console.log('Calculating parameters for claimAndDistribute() ...');
                 const tx = treasuryVesterProxy.methods.claimAndDistribute();
                 const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
-                const gasPrice = await web3.eth.getGasPrice();
+                const baseGasPrice = await web3.eth.getGasPrice();
 
                 console.log('Sending claimAndDistribute() ...');
                 const receipt = await tx.send({
                     from: CONFIG.WALLET.ADDRESS,
                     gas,
-                    gasPrice,
+                    maxFeePerGas: baseGasPrice * 2,
+                    maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
                 });
                 console.log(`Transaction hash: ${receipt.transactionHash} (${snowtraceLink(receipt.transactionHash)}`);
             } catch (error) {
