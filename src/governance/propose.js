@@ -65,8 +65,8 @@ We will transfer 2m PNG from CommunityTreasury to the Pangolin multisig.`
 
     console.log(`Estimating gas ...`);
     const gas = await multisigTX.estimateGas({ from: CONFIG.WALLET.ADDRESS });
-    const gasPrice = await web3.eth.getGasPrice();
-    console.log(`Estimated gas: ${(parseInt(gas) * gasPrice / (10 ** 18)).toFixed(5)} AVAX`);
+    const baseGasPrice = await web3.eth.getGasPrice();
+    console.log(`Estimated gas: ${(parseInt(gas) * baseGasPrice / (10 ** 18)).toFixed(5)} AVAX`);
     console.log();
 
 
@@ -79,7 +79,8 @@ We will transfer 2m PNG from CommunityTreasury to the Pangolin multisig.`
     return multisigTX.send({
         from: CONFIG.WALLET.ADDRESS,
         gas,
-        gasPrice,
+        maxFeePerGas: baseGasPrice * 2,
+        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
     });
 })()
   .then(console.log)

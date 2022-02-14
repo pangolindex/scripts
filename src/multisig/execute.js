@@ -38,14 +38,15 @@ const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
 
         const tx = multiContract.methods.executeTransaction(id);
 
-        const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+        const baseGasPrice = await web3.eth.getGasPrice();
 
         console.log(`Executing transaction #${id} ...`);
 
         const receipt = await tx.send({
             from: CONFIG.WALLET.ADDRESS,
             gas: 7500000,
-            gasPrice: await web3.eth.getGasPrice(),
+            maxFeePerGas: baseGasPrice * 2,
+            maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
             nonce: nonce++,
         });
 

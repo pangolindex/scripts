@@ -19,12 +19,16 @@ web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
         ADDRESS.PANGOLIN_MULTISIG_ADDRESS,
     );
 
+    const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+    const baseGasPrice = await web3.eth.getGasPrice();
+
     console.log(`Submitting tx ...`);
 
     const receipt = await tx.send({
         from: CONFIG.WALLET.ADDRESS,
-        gas: await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS }),
-        gasPrice: await web3.eth.getGasPrice(),
+        gas,
+        maxFeePerGas: baseGasPrice * 2,
+        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
     });
 
     if (!receipt?.status) {

@@ -51,10 +51,14 @@ const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRES
         bytecode,
     );
 
+    const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+    const baseGasPrice = await web3.eth.getGasPrice();
+
     const receipt = await multiTX.send({
         from: CONFIG.WALLET.ADDRESS,
-        gas: await multiTX.estimateGas({ from: CONFIG.WALLET.ADDRESS }),
-        gasPrice: await web3.eth.getGasPrice()
+        gas,
+        maxFeePerGas: baseGasPrice * 2,
+        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
     });
 
     if (!receipt?.status) {

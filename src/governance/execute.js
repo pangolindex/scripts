@@ -19,10 +19,13 @@ const ID = 5;
 
     const tx = gov.methods.execute(ID);
 
+    const baseGasPrice = await web3.eth.getGasPrice();
+
     return tx.send({
         from: CONFIG.WALLET.ADDRESS,
         gas: '8000000',
-        gasPrice: await web3.eth.getGasPrice(),
+        maxFeePerGas: baseGasPrice * 2,
+        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
     });
 })()
     .then(console.log)
