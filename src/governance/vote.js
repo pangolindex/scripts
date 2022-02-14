@@ -2,28 +2,36 @@
 const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
+const CONSTANTS = require('../core/constants');
+const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
+const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 
 const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-
+let startingAvax;
+let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const PROPOSAL = 6;
-const VOTE = true;
+const govAddress = ADDRESS.PANGOLIN_GOVERNANCE_ADDRESS;
+const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const proposal = 6;
+const vote = true;
 // --------------------------------------------------
 
 
 (async () => {
-    const multisig = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, ADDRESS.PANGOLIN_MULTISIG_ADDRESS);
+    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
-    const gov = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, ADDRESS.PANGOLIN_GOVERNANCE_ADDRESS);
+    const gov = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, govAddress);
     const tx = await gov.methods.castVote(
-      PROPOSAL,
-      VOTE,
+        proposal,
+        vote,
     );
 
     console.log(`Encoding bytecode ...`);
@@ -33,28 +41,38 @@ const VOTE = true;
     console.log(`Encoded bytecode to ${fileOutput}`);
     console.log();
 
-    const multiTX = multisig.methods.submitTransaction(
-        gov._address,
-        0,
-        bytecode,
-    );
+    switch (multisigType) {
+        case CONSTANTS.GNOSIS_MULTISIG:
+            const receipt = await gnosisMultisigPropose({
+                multisigAddress,
+                destination: govAddress,
+                value: 0,
+                bytecode,
+            });
 
-    const gas = await multiTX.estimateGas({ from: CONFIG.WALLET.ADDRESS });
-    const baseGasPrice = await web3.eth.getGasPrice();
-
-    console.log(`Submitting tx ...`);
-
-    return multiTX.send({
-        from: CONFIG.WALLET.ADDRESS,
-        gas,
-        maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
-    });
+            if (!receipt?.status) {
+                console.log(receipt);
+                process.exit(1);
+            } else {
+                console.log(`Transaction hash: ${receipt.transactionHash}`);
+            }
+            break;
+        case CONSTANTS.GNOSIS_SAFE:
+            await gnosisSafePropose({
+                multisigAddress,
+                destination: govAddress,
+                value: 0,
+                bytecode,
+            });
+            break;
+        default:
+            throw new Error(`Unknown multisig type: ${multisigType}`);
+    }
 })()
-  .then(response => {
-      console.log(response);
-      console.log(`Submitted!`);
-      console.log(`Transaction: ${response.transactionHash}`);
-  })
-  .catch(console.error)
-  .finally(process.exit);
+    .catch(console.error)
+    .finally(async () => {
+        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
+        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        process.exit(0);
+    });

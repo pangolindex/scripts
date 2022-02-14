@@ -10,14 +10,15 @@ web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 // Change These Variables
 // --------------------------------------------------
-const ID = 5;
+const govAddress = ADDRESS.PANGOLIN_GOVERNANCE_ADDRESS;
+const proposal = 5;
 // --------------------------------------------------
 
 
 (async () => {
-    const gov = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, ADDRESS.PANGOLIN_GOVERNANCE_ADDRESS);
+    const govContract = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, govAddress);
 
-    const tx = gov.methods.execute(ID);
+    const tx = govContract.methods.execute(proposal);
 
     const baseGasPrice = await web3.eth.getGasPrice();
 

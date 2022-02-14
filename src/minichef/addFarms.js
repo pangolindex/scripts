@@ -16,27 +16,35 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const tokenAddress = ADDRESS.WAVAX;
-const spenderAddress = '0x0000000000000000000000000000000000000000';
-const allowanceAmount = '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-
-const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
-const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
+const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_SAFE;
+const farms = [
+    {
+        pgl: '0x0000000000000000000000000000000000000000',
+        weight: 100 // 1x farm
+    }
+];
 // --------------------------------------------------
 
 
+const pglAddresses = farms.map(farm => farm.pgl);
+const allocationPoints = farms.map(farm => farm.weight);
+const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS); // Typically zero address
+
 /*
- * This is an example of approving an ERC20 token to be spent by the multisig
+ * This is an example of adding farms via the multisig
  */
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
     console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
-    const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
+    const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, miniChefAddress);
 
-    const tx = tokenContract.methods.approve(
-        spenderAddress,
-        allowanceAmount
+    const tx = miniChefContract.methods.addPools(
+        allocationPoints,
+        pglAddresses,
+        rewarderAddresses,
     );
 
     console.log(`Encoding bytecode ...`);
@@ -50,7 +58,7 @@ const multisigType = CONSTANTS.GNOSIS_MULTISIG;
         case CONSTANTS.GNOSIS_MULTISIG:
             const receipt = await gnosisMultisigPropose({
                 multisigAddress,
-                destination: tokenAddress,
+                destination: miniChefAddress,
                 value: 0,
                 bytecode,
             });
@@ -65,7 +73,7 @@ const multisigType = CONSTANTS.GNOSIS_MULTISIG;
         case CONSTANTS.GNOSIS_SAFE:
             await gnosisSafePropose({
                 multisigAddress,
-                destination: tokenAddress,
+                destination: miniChefAddress,
                 value: 0,
                 bytecode,
             });

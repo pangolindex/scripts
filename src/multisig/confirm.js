@@ -1,7 +1,9 @@
 // Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
+const CONSTANTS = require('../core/constants');
+const { confirm: gnosisMultisigConfirm } = require('../core/gnosisMultisig');
+const { confirm: gnosisSafeConfirm } = require('../core/gnosisSafe');
 
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
@@ -12,10 +14,12 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
+// Note: when using a gnosis multisig, these will be IDs vs. hashes when using a gnosis safe
 const IDs = createArrayOfNumbers(13, 13); // Note: Range is inclusive
 const includeExtraGas = true;
 
 const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_MULTISIG;
 // --------------------------------------------------
 
 
@@ -23,46 +27,40 @@ const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
  * This is an example of confirming a set of multisig transactions
  */
 (async () => {
-    const multiContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
-    let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
-
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
     console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     for (const id of IDs) {
+        let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
 
-        const { destination, value, data, executed } = await multiContract.methods.transactions(id).call();
-        if (executed) {
-            console.log(`Skipping #${id} due to prior execution`);
-            continue;
-        }
+        switch (multisigType) {
+            case CONSTANTS.GNOSIS_MULTISIG:
+                const receipt = await gnosisMultisigConfirm({
+                    multisigAddress,
+                    id,
+                    includeExtraGas,
+                    nonce,
+                });
 
-        const alreadyConfirmed = await multiContract.methods.confirmations(id, CONFIG.WALLET.ADDRESS).call();
-        if (alreadyConfirmed) {
-            console.log(`Skipping #${id} due to prior confirmation`);
-            continue;
-        }
+                if (!receipt) continue;
 
-        const tx = multiContract.methods.confirmTransaction(id);
+                if (!receipt?.status) {
+                    console.log(receipt);
+                    process.exit(1);
+                } else {
+                    nonce++;
+                    console.log(`Transaction hash: ${receipt.transactionHash}`);
+                }
 
-        const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
-        const baseGasPrice = await web3.eth.getGasPrice();
-
-        console.log(`Confirming transaction #${id} ...`);
-
-        const receipt = await tx.send({
-            from: CONFIG.WALLET.ADDRESS,
-            gas: includeExtraGas ? 7500000 : gas,
-            maxFeePerGas: baseGasPrice * 2,
-            maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
-            nonce: nonce++,
-        });
-
-        if (!receipt?.status) {
-            console.log(receipt);
-            process.exit(1);
-        } else {
-            console.log(`Transaction hash: ${receipt.transactionHash}`);
+                break;
+            case CONSTANTS.GNOSIS_SAFE:
+                await gnosisSafeConfirm({
+                    multisigAddress,
+                    safeTxHash: id,
+                });
+                break;
+            default:
+                throw new Error(`Unknown multisig type: ${multisigType}`);
         }
     }
 })()
