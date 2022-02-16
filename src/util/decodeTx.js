@@ -12,4 +12,4 @@ const bytecode = '0x0';
 abiDecoder.addABI(destinationABI);
 
 const decoded = abiDecoder.decodeMethod(bytecode);
-console.log(decoded);
+console.dir(decoded, { depth: null });
