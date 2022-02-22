@@ -37,7 +37,7 @@ def main():
         #If exist more pages, get the last page and get last item from list
         if data["data"]["pagination"]["has_more"]:
             #Get last page
-            total_page = int(int(data["data"]["pagination"]["total_count"]) / 1000)
+            total_page = int(data["data"]["pagination"]["total_count"]) // 1000
             geturl = URL.format(start_date, last_date, total_page)
             response = requests.get(geturl)
             data = response.json()
