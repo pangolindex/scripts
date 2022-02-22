@@ -19,7 +19,7 @@ Run the command bellow:
 
 ### Install libs
 
-`pip install -r requirements.txt`
+`pip3 install -r requirements.txt`
 
 # get_holders.py
 
