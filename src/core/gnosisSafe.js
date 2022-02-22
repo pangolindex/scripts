@@ -1,6 +1,7 @@
 const CONFIG = require('../../config/config');
 const ADDRESS = require('../../config/address.json');
 const Safe = require('@gnosis.pm/safe-core-sdk').default;
+const { EthSignSignature } = require('@gnosis.pm/safe-core-sdk');
 const { OperationType } = require('@gnosis.pm/safe-core-sdk-types/dist/src/types');
 const SafeServiceClient = require('@gnosis.pm/safe-service-client').default;
 const Web3Adapter = require('@gnosis.pm/safe-web3-lib').default;
@@ -64,7 +65,13 @@ const confirm = async ({ multisigAddress, safeTxHash }) => {
     return await safeService.confirmTransaction(safeTxHash, safeSignature.data);
 };
 
+/*
+ * TODO: Currently not functioning and is a WiP...
+ */
 const execute = async ({ multisigAddress, safeTxHash }) => {
+
+    throw new Error(`Gnosis safe execution is not yet supported!`);
+
     const safeSdk = await Safe.create({
         ethAdapter: adapter,
         safeAddress: multisigAddress,
@@ -72,6 +79,17 @@ const execute = async ({ multisigAddress, safeTxHash }) => {
 
     const safeMultisigTransactionResponse = await safeService.getTransaction(safeTxHash);
     const safeTransaction = await safeSdk.createTransaction(safeMultisigTransactionResponse);
+
+    const currentSafeNonce = 0;
+    const pendingTransactions = await safeService.getPendingTransactions(multisigAddress, currentSafeNonce);
+    const pendingTransaction = pendingTransactions.results.find(x => x.safeTxHash === safeTxHash);
+
+    if (!pendingTransaction) throw new Error('Missing transaction!');
+
+    for (const confirmation of pendingTransaction.confirmations) {
+        const signature = new EthSignSignature(confirmation.owner, confirmation.signature)
+        safeTransaction.addSignature(signature);
+    }
 
     console.log(`Executing safe transaction hash ${safeTxHash} ...`);
 
