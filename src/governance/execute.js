@@ -6,7 +6,8 @@ const ADDRESS = require('../../config/address.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-
+let startingAvax;
+let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
@@ -16,19 +17,28 @@ const proposal = 5;
 
 
 (async () => {
+    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
+
     const govContract = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, govAddress);
 
     const tx = govContract.methods.execute(proposal);
 
     const baseGasPrice = await web3.eth.getGasPrice();
 
-    return tx.send({
+    console.log(`Executing proposal #${proposal} ...`);
+
+    await tx.send({
         from: CONFIG.WALLET.ADDRESS,
         gas: '8000000',
         maxFeePerGas: baseGasPrice * 2,
         maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
     });
 })()
-    .then(console.log)
     .catch(console.error)
-    .finally(process.exit);
+    .finally(async () => {
+        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
+        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        process.exit(0);
+    });
