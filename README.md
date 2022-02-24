@@ -12,6 +12,11 @@ the hands of users with light+ technical experience.
 This directory contains some core logic (think library) used to support other scripts in the repo. 
 You shouldn't need to play around in here.
 
+### `/src/fee_collector/`
+This directory contains scripts to interact with FeeCollector, the contract tasked with custody and management of 
+Pangolin's accumulated swap fees. The most commonly done tasks is permissionlessly initiating a PNG buyback to fund 
+the PNG staking program.
+
 ### `/src/governance/`
 This directory contains scripts to interact with GovernorAlpha, the primary onchain governance mechanism for Pangolin. 
 Notable functionality includes submitting a proposal, voting on a proposal, and executing a proposal.
