@@ -21,7 +21,7 @@ This directory contains scripts to interact with MiniChefV2, the contract drivin
 incentivizing liquidity providers aka "farming." Notable functionality includes adding farms and changing weights.
 
 ### `/src/multisig/`
-This directory contains scripts to interact with different versions of DAOs commonly refered to as multi-signature 
+This directory contains scripts to interact with different versions of DAOs commonly referred to as multi-signature 
 wallets. Support is included for interacting with the gnosis multisig and gnosis safe. Notable functionality includes 
 submitting transactions, confirming transactions, and executing transactions.
 
