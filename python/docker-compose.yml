@@ -1,0 +1,32 @@
+# Copyright 2020 ChainSafe Systems
+# SPDX-License-Identifier: LGPL-3.0-only
+
+version: '3'
+services:
+  bridge:
+    build:
+      context: .
+    container_name: pangopython
+    environment:
+      - MONGODB_PASSWORD=${MONGO_PWD}
+    command: --config /config/config.json --verbosity trce
+    volumes:
+      - ./airdrop_collect:/workspace/
+#  mongodb:
+#    image: mongo:latest
+#    container_name: mongodb
+#    hostname: mongodb
+#    volumes:
+#      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf
+#      - ./.docker/mongodb/initdb.d/:/docker-entrypoint-initdb.d/
+#      - ./.docker/mongodb/data/db/:/data/db/
+#      - ./.docker/mongodb/data/log/:/var/log/mongodb/
+#    env_file:
+#      - .env
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+#      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+#      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+#    ports:
+#      - "27017:27017"
+#    command: [ "-f", "/etc/mongod.conf" ]
