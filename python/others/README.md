@@ -29,11 +29,11 @@ This script get block by date
 ## Run 
 `python block_by_date.py`
 
-# get_png_pools.py
-This script get all pools with PNG as pair and save in [pools.json](src/constants/pools.json)
+# get_token_pools.py
+This script get all pools with seletect token as pair and save in pools.json
 
 ## Run 
-`python get_png_pools.py`
+`python get_token_pools.py`
 
 # swap_fee.py
 This script generates swap fee chart and exports to a CSV
