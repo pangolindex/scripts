@@ -18,6 +18,9 @@ def main():
     database = Database(connection_string)
 
     path = os.path.abspath(".")
+    if not os.path.exists('csv'):
+        os.mkdir('csv')
+    path = os.path.join(path, 'csv')
 
     # Get date
     w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))

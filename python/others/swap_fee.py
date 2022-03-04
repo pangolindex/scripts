@@ -1,14 +1,14 @@
-import dash
+import dash, sys
 
 from decimal import Decimal
-from dash import dcc
-from dash import html
+from dash import dcc, html
 from dash.dependencies import Input, Output
 from datetime import datetime
 import pandas as pd
 import plotly.express as px
 
-from src.graph import Graph
+sys.path.insert(1, '../holders/src')
+from graph import Graph
 
 app = dash.Dash(__name__)
 
@@ -18,13 +18,13 @@ def refresh_dataframe():
     global df_day
     global df_month
     # Query day volume and date in pangolin subgraph
-    graph = Graph("https://api.thegraph.com/subgraphs/name/dasconnor/pangolin-dex")
+    graph = Graph("https://api.thegraph.com/subgraphs/name/pangolindex/exchange")
     querystr = """
     {
-    data: pangolinDayDatas(first: 1000){
-        date
-        dailyVolumeUSD
-    }
+        data: pangolinDayDatas(first: 1000){
+            date
+            dailyVolumeUSD
+        }
     }
     """
     results = graph.query(querystr)
@@ -39,7 +39,8 @@ def refresh_dataframe():
     # Sum all days of each month to get swap fee of each month
     df_month = df_day.groupby(df_day['date'].dt.strftime('%m-%Y'))['volume'].sum().reset_index()
     # Convert to datetime date collumn
-    df_month['date']= pd.to_datetime(df_month['date'])
+    df_month['date'] = pd.to_datetime(df_month['date'])
+    df_month = df_month.sort_values(by="date")
 
 # Start dataframe with dataframe of days
 df = df_day

@@ -14,18 +14,15 @@ from src.constants.main import (
 from src.database import Database
 from src.workers import Worker_PNG, Worker_LP, Worker_STAKING
 
-PATH_SRC = os.path.join(os.path.abspath("."), "src")
-PATH_CONST = os.path.join(PATH_SRC, "constants")
-PATH_ABI = os.path.join(PATH_CONST, "ABI")
+PATH_ABS = os.path.dirname(os.path.realpath('__file__'))
+PATH_ABI = os.path.join(PATH_ABS , "../../config")
 
-with open(os.path.join(PATH_ABI, "PNG.json")) as file:
-    PNG_ABI = json.load(file)
+with open(os.path.join(PATH_ABI, "abi.json")) as file:
+    ABIS = json.load(file)
 
-with open(os.path.join(PATH_ABI, "PNG_LP.json")) as file:
-    LP_PNGAVAX_ABI = json.load(file)
-
-with open(os.path.join(PATH_ABI, "STAKING.json")) as file:
-   STAKING_ABI = json.load(file)
+PNG_ABI = ABIS['PNG']
+LP_PNGAVAX_ABI = ABIS['PAIR']
+STAKING_ABI = ABIS['STAKING_REWARDS']
 
 def main() -> None:
     """This script get all PNG transfers, Mint/Burn LP PNG/AVAX and Staking (AVAX, OOE, APEIN) and save in mongodb
