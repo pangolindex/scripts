@@ -3,18 +3,18 @@
 
 version: '3'
 services:
-  bridge:
+  python-env:
     build:
       context: .
     container_name: pangopython
     environment:
       - MONGODB_PASSWORD=${MONGO_PWD}
-    command: --config /config/config.json --verbosity trce
+    command: [ "tail", "-f", "./config.ini"]
     volumes:
-      - ./airdrop_collect:/workspace/
-#  mongodb:
-#    image: mongo:latest
-#    container_name: mongodb
+      - ./scripts:/workspace/
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
 #    hostname: mongodb
 #    volumes:
 #      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf
@@ -23,10 +23,15 @@ services:
 #      - ./.docker/mongodb/data/log/:/var/log/mongodb/
 #    env_file:
 #      - .env
-#    environment:
-#      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-#      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-#      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
-#    ports:
-#      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USR}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PWD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    volumes:
+      - mongodbdata:/data/db/
+      - ./outputs:/workspace/outputs
+    ports:
+      - "27017:27017"
 #    command: [ "-f", "/etc/mongod.conf" ]
+volumes:
+  mongodbdata:

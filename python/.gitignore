@@ -5,6 +5,9 @@ tmp/
 helpers/
 .env
 docs/build
+.docker/
+!.docker/.gitkeep
+!.docker/mongodb.gitkeep
 # Pycharm configuration
 .idea*
 .idea/*

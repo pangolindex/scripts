@@ -4,3 +4,4 @@ pandas
 plotly
 pymongo
 web3
+dnspython

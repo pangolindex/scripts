@@ -76,3 +76,41 @@ In this case it is http://127.0.0.1:8050/
 ![Image 4](https://i.imgur.com/InLxbLj.png)
 
 ![Image 5](https://i.imgur.com/ERuKrrC.png)
+
+
+## Use with docker & docker compose 
+
+### Docker & pycharm
+The dockerfile can be used with pycharm to build interpreter https://www.jetbrains.com/help/pycharm/using-docker-as-a-remote-interpreter.html#example to ensure portability across environments while developing.
+
+### Run scripts w/ docker compose 
+It is also possible to launch environment locally with a simple docker compose command. It allows also to run the scripts on development servers or on services running docker containers. 
+
+
+To test locally: 
+
+copy the example env vars 
+```
+cp .env.example .env
+```
+launch containers
+```
+docker compose up -d 
+```
+
+will build a python + required dbs environment for testing 
+
+Now the container shell is accessible through docker: 
+```
+ docker exec -it pangopython /bin/bash
+```
+
+and it is possible to run the different scripts available, once connected to the shell: 
+```
+python get_holders.py
+```
+
+## local mongodb
+
+Mongodb database is accessible with any mongodb interface like compass https://www.mongodb.com/try/download/compass
+The default set up is the following connection string: mongodb://admin:password@localhost:27017/?authSource=admin
