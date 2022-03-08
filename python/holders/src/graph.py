@@ -6,10 +6,10 @@ from typing import Any, Dict, Optional
 
 class Graph():
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, timeout: int = 20) -> None:
         self.url = url
         transport = RequestsHTTPTransport(url=url)
-        self.client = Client(transport=transport, fetch_schema_from_transport=False)
+        self.client = Client(transport=transport, fetch_schema_from_transport=False, execute_timeout=timeout)
 
     def query(
             self,

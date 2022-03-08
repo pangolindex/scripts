@@ -40,6 +40,9 @@ This directory contains a collection of scripts aimed at understanding on-chain 
 provide a GUI for related information. Notable functionality includes an overview of all the farms, single side 
 staking expirations, and verification of tokenlist updates.
 
+### `/python`
+This directory contains all scripts wrote in python.
+
 ### Other
 The vesting bot used by Pangolin also lives here. It ensures that PNG is vested appropriately each day so that PNG 
 farming rewards continue to flow.

@@ -45,7 +45,7 @@ def get_png_holder(
         return []
     except ReadTimeout:
         # In timeout divide the block range in half
-        half = int(toblock/2)
+        half = toblock // 2
         _transactions = get_png_holder(fromblock, half, png_contract)
         _transactions2 = get_png_holder(toblock-half, toblock, png_contract)
         # Concat lists
@@ -69,13 +69,13 @@ def get_lp_pngavax(
         pass
     except ReadTimeout:
         # In timeout divide the block range in half
-        half = int(toblock/2)
+        half = toblock // 2
         _transactions = get_lp_pngavax(fromblock, half, lp_contract)
         _transactions2 = get_lp_pngavax(toblock-half, toblock, lp_contract)
         # Concat lists
         mint_transactions.extend(_transactions)
         mint_transactions.extend(_transactions2)
-        
+
     burn_transactions = []
     try:
         burn_event_filter = lp_contract.events.Burn.createFilter(
@@ -87,7 +87,7 @@ def get_lp_pngavax(
         pass
     except ReadTimeout:
         # In timeout divide the block range in half
-        half = int(toblock/2)
+        half = toblock // 2
         _transactions = get_lp_pngavax(fromblock, half, lp_contract)
         _transactions2 = get_lp_pngavax(toblock-half, toblock, lp_contract)
         # Concat lists
@@ -115,12 +115,12 @@ def get_staking(
         pass
     except ReadTimeout:
         # In timeout divide the block range in half
-        half = int(toblock/2)
+        half = toblock // 2
         _transactions = get_staking(fromblock, half, staking_contract)
         _transactions2 = get_staking(toblock-half, toblock, staking_contract)
         staked_transactions.extend(_transactions)
         staked_transactions.extend(_transactions2)
-    
+
     withdrawn_transactions = []
     try:
         withdrawn_event_filter = staking_contract.events.Withdrawn.createFilter(
@@ -132,7 +132,7 @@ def get_staking(
         pass
     except ReadTimeout:
         # In timeout divide the block range in half
-        half = int(toblock/2)
+        half = toblock // 2
         _transactions = get_staking(fromblock, half, staking_contract)
         _transactions2 = get_staking(toblock-half, toblock, staking_contract)
         # Concat lists

@@ -1,6 +1,0 @@
-gql
-dash
-pandas
-plotly
-pymongo
-web3
