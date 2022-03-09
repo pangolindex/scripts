@@ -5,7 +5,13 @@ from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
 PATH_ABS = os.path.dirname(os.path.realpath('__file__'))
-PATH_ABI = os.path.join(PATH_ABS , "../../config")
+
+if os.environ.get('CONF_PATH') is None:
+    CONF_PATH = "../../config"
+else:
+    CONF_PATH = os.environ.get('CONF_PATH')
+
+PATH_ABI = os.path.join(PATH_ABS , CONF_PATH)
 
 with open(os.path.join(PATH_ABI, "abi.json")) as file:
     ABIS = json.load(file)
