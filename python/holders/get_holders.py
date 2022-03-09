@@ -14,8 +14,14 @@ from src.constants.main import (
 from src.database import Database
 from src.workers import Worker_PNG, Worker_LP, Worker_STAKING
 
+if os.environ.get('CONF_PATH') is None:
+    CONF_PATH = "../../config"
+else:
+    CONF_PATH = os.environ.get('CONF_PATH')
+
+print(CONF_PATH)
 PATH_ABS = os.path.dirname(os.path.realpath('__file__'))
-PATH_ABI = os.path.join(PATH_ABS , "../../config")
+PATH_ABI = os.path.join(PATH_ABS , CONF_PATH)
 
 with open(os.path.join(PATH_ABI, "abi.json")) as file:
     ABIS = json.load(file)
