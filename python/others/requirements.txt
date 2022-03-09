@@ -1,0 +1,6 @@
+gql==3.0.0
+dash==2.2.0
+pandas==1.4.1
+plotly==5.6.0
+requests_toolbelt==0.9.1
+web3==5.28.0

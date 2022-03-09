@@ -1,7 +1,9 @@
 # Pangolin Python Scripts
 
-## Install
+## holders
+This directory contains scripts to get a daily average of token transfers, mint/burn of lp token/token2 and staking token
 
+<<<<<<< HEAD
 ### Create Python Environment
 `python -m venv env`
 
@@ -114,3 +116,6 @@ python get_holders.py
 
 Mongodb database is accessible with any mongodb interface like compass https://www.mongodb.com/try/download/compass
 The default set up is the following connection string: mongodb://admin:password@localhost:27017/?authSource=admin
+
+## others
+This directory contains small scripts with various functions, see the [README](others/README.md) inside
