@@ -34,7 +34,10 @@ const MIN_PROFIT_AVAX = 0.05;
             query: `query {
                 liquidityPositions(
                     first: 1000
-                    where: { user: "${ADDRESS.FEE_COLLECTOR.toLowerCase()}" }
+                    where: {
+                        user: "${ADDRESS.FEE_COLLECTOR.toLowerCase()}"
+                        liquidityTokenBalance_gt: 0
+                    }
                 ) {
                     id
                     pair {
