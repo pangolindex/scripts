@@ -39,7 +39,13 @@ def main() -> None:
 
     # Load config
     config = configparser.ConfigParser()
-    config.read('config.ini')
+
+    #loads a specific airdrop config if specified
+    if os.environ.get('AIRDROP_CONF') is not None:
+        airdrop_conf_path = './airdrops/'+ os.environ.get('AIRDROP_CONF') + '.ini'
+        config.read(airdrop_conf_path)
+    else:
+        config.read('config.ini')
 
     # Number of thread of each category
     NO_WORKERS_PNG = int(config["GetHolders"]["no_workers_png"])

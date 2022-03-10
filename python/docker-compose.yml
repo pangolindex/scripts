@@ -13,6 +13,7 @@ services:
     environment:
       MONGODB_PASSWORD: ${MONGO_PWD}
       CONF_PATH: "/workspace/config"
+      AIRDROP_CONF: ${AIRDROP_CONF}
     command: [ "tail", "-f", "./requirements.txt"]
     volumes:
       - ./${PROJECT}:/workspace/
