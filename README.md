@@ -8,6 +8,15 @@ something. Some directories are driven by one higher level configuration file li
 same information is used across multiple steps. Overall, the repo is meant to be tweaked as needed by devs and to hold 
 the hands of users with light+ technical experience.
 
+
+## Configuring your wallet
+
+Some scripts make state changing on-chain calls which require your wallet to be connected. 
+You can do this by following the instructions in the [configuration directory](./config/README.md)
+
+
+## Directory overview
+
 ### `/src/core/`
 This directory contains some core logic (think library) used to support other scripts in the repo. 
 You shouldn't need to play around in here.

@@ -1,8 +1,8 @@
 # Configuration
 
 Some functionality requires sensitive information like your wallet address or private key. 
-This information should be provided via the `./config/config.js` file following the template provided 
-in the `./config/config.example.js` file:
+This information should be provided via a `config.js` file following the template provided 
+in the `config.example.js` file:
 
 1) Copy or rename `config.example.js` to `config.js`
 2) Replace the `ADDRESS` value with your wallet address

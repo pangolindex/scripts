@@ -95,7 +95,7 @@ const MIN_PROFIT_AVAX = 0.05;
 
         if (expectedProfit >= bestProfit) {
             // Best scenario found
-            console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}:`);
+            console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`);
 
             console.table(acceptedPositions.map(p => ({
                 pgl: p.pgl,
