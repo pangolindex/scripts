@@ -33,7 +33,7 @@ const tokens = [
     const table = [];
 
     for (const token of tokens) {
-        const tokenContract = new web3.eth.Contract(ABI.TOKEN, token.address);
+        const tokenContract = new web3.eth.Contract(ABI.TOKEN, token.address.toLowerCase());
         const [ name, symbol, decimals ] = await Promise.all([
             tokenContract.methods.name().call(),
             tokenContract.methods.symbol().call(),
@@ -41,6 +41,8 @@ const tokens = [
         ]);
         table.push({
             name,
+            checksum: web3.utils.checkAddressChecksum(token.address),
+            logoMatch: token.logoURI.includes(token.address),
             symbol: `${token.symbol} vs. ${symbol}`,
             symbolMatch: token.symbol === symbol,
             decimals: `${token.decimals} vs. ${decimals}`,
