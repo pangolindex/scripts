@@ -19,10 +19,12 @@ let endingAvax;
 const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
+const bytecodeOnly = false;
 const farms = [
     {
         pgl: '0x0000000000000000000000000000000000000000',
-        weight: 100 // 1x farm
+        weight: 100,
+        // rewarder: '0x0000000000000000000000000000000000000000',
     }
 ];
 // --------------------------------------------------
@@ -53,6 +55,11 @@ const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRES
     fs.writeFileSync(fileOutput, bytecode);
     console.log(`Encoded bytecode to ${fileOutput}`);
     console.log();
+
+    if (bytecodeOnly) {
+        console.log(`Skipping execution due to 'bytecodeOnly' config`);
+        return;
+    }
 
     switch (multisigType) {
         case CONSTANTS.GNOSIS_MULTISIG:
