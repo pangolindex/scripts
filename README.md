@@ -32,7 +32,8 @@ Notable functionality includes submitting a proposal, voting on a proposal, and 
 
 ### `/src/minichef/`
 This directory contains scripts to interact with MiniChefV2, the contract driving Pangolin's primary system of 
-incentivizing liquidity providers aka "farming." Notable functionality includes adding farms and changing weights.
+incentivizing liquidity providers aka "farming." Notable functionality includes an overview of all the farms, 
+deploying rewarders, adding farms, changing weights.
 
 ### `/src/multisig/`
 This directory contains scripts to interact with different versions of DAOs commonly referred to as multi-signature 
@@ -46,8 +47,8 @@ functionality includes setting a program duration period, ownership management, 
 
 ### `/src/util/`
 This directory contains a collection of scripts aimed at understanding on-chain data better. Many of these scripts 
-provide a GUI for related information. Notable functionality includes an overview of all the farms, single side 
-staking expirations, and verification of tokenlist updates.
+provide a GUI for related information. Notable functionality includes single side staking expirations and verification 
+of tokenlist updates.
 
 ### `/python`
 This directory contains all scripts wrote in python.
