@@ -19,6 +19,7 @@ let endingAvax;
 const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
+const showOverview = true;
 const bytecodeOnly = false;
 const farms = [
     {
@@ -44,6 +45,51 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typical
     console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, miniChefAddress);
+
+    if (showOverview) {
+        const lpTokens = await miniChefContract.methods.lpTokens().call();
+        const poolInfos = await miniChefContract.methods.poolInfos().call();
+
+        const farmInfo = await Promise.all(lpTokens.map(async (pglAddress, i) => {
+            if (!farms.some(farm => farm.pid === i)) return {};
+
+            const pglContract = new web3.eth.Contract(ABI.PAIR, pglAddress);
+            const [token0, token1] = await Promise.all([
+                pglContract.methods.token0().call(),
+                pglContract.methods.token1().call(),
+            ]);
+
+            const [token0Symbol, token1Symbol] = await Promise.all([
+                new web3.eth.Contract(ABI.TOKEN, token0).methods.symbol().call(),
+                new web3.eth.Contract(ABI.TOKEN, token1).methods.symbol().call(),
+            ]);
+
+            return {
+                token0Symbol,
+                token1Symbol,
+            };
+        }));
+
+        let netWeightDelta = 0;
+
+        const table = farms.map(({ pid, weight }) => {
+            const weightDelta = weight - parseInt(poolInfos[pid].allocPoint);
+            netWeightDelta += weightDelta;
+            return {
+                pid: pid,
+                'Farm': `${farmInfo[pid].token0Symbol}-${farmInfo[pid].token1Symbol}`,
+                'Old Weight': parseInt(poolInfos[pid].allocPoint),
+                'New Weight': weight,
+                'Delta Weight': weightDelta,
+            };
+        });
+
+        console.table(table);
+        console.log(`Updating ${farms.length} farms with a net weight change of ${netWeightDelta}`);
+
+        console.log(`Pausing for 15 seconds ...`);
+        await new Promise((resolve) => setTimeout(resolve, 15 * 1000));
+    }
 
     const tx = miniChefContract.methods.setPools(
         poolIds,
