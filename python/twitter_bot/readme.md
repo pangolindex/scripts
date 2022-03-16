@@ -2,6 +2,8 @@
 
 This is the bot of [Pangolin Aprs](https://twitter.com/PangolinAPRs) account.
 
+You need to get api keys in [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard) and if you want to upload images, you will need to request [elevated access](https://developer.twitter.com/en/portal/products/elevated).
+
 This bot has the following functions:
 - **Tweet the top 6 aprs** of pangolin farms, every 8 hours
 
