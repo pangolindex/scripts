@@ -18,7 +18,6 @@ const proposal = 5;
 
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const govContract = new web3.eth.Contract(ABI.GOVERNOR_ALPHA, govAddress);
 
@@ -38,7 +37,6 @@ const proposal = 5;
     .catch(console.error)
     .finally(async () => {
         endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });

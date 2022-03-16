@@ -18,7 +18,6 @@ let endingAvax;
  */
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const rewardTokenContract = new web3.eth.Contract(ABI.TOKEN, StakingConfig.REWARD_ADDRESS);
 
@@ -58,7 +57,6 @@ let endingAvax;
     .catch(console.error)
     .finally(async () => {
         endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });

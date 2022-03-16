@@ -35,7 +35,6 @@ const rewarders = [
 verifyRewardersSyntax(rewarders);
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const rewarderViaMultiplierContract = new web3.eth.Contract(ABI.REWARDER_VIA_MULTIPLIER);
 
@@ -91,8 +90,6 @@ verifyRewardersSyntax(rewarders);
         const gas = await deployTx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
 
         console.log(`Deploying rewarder with ${rewardAddressArguments.length} additional rewards (${rewardSymbols.join(',')}) ...`)
-
-        console.log(`Estimated deploy cost: ${gas * baseGasPrice / (10 ** 18)} AVAX`);
 
         const { _address: rewarderAddress } = await deployTx.send({
             from: CONFIG.WALLET.ADDRESS,
@@ -154,7 +151,6 @@ verifyRewardersSyntax(rewarders);
     .catch(console.error)
     .finally(async () => {
         endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });

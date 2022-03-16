@@ -19,8 +19,6 @@ const MIN_PROFIT_AVAX = 0.05;
 
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
-    console.log();
 
     const feeCollectorContract = new web3.eth.Contract(ABI.FEE_COLLECTOR, ADDRESS.FEE_COLLECTOR);
     const harvestIncentive = parseInt(await feeCollectorContract.methods.harvestIncentive().call());
@@ -139,7 +137,6 @@ const MIN_PROFIT_AVAX = 0.05;
   .catch(console.error)
   .finally(async () => {
       endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-      console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
       console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
       process.exit(0);
   });

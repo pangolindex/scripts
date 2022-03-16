@@ -30,7 +30,6 @@ const multisigType = CONSTANTS.GNOSIS_MULTISIG;
  */
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-    console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
 
@@ -77,7 +76,6 @@ const multisigType = CONSTANTS.GNOSIS_MULTISIG;
     .catch(console.error)
     .finally(async () => {
         endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`Ending AVAX: ${endingAvax / (10 ** 18)}`);
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });
