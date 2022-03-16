@@ -5,6 +5,7 @@ const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
+const helpers = require('../core/helpers');
 
 const fs = require('fs');
 const path = require('path');
@@ -32,14 +33,15 @@ const farms = [
 // --------------------------------------------------
 
 
-const poolIds = farms.map(farm => farm.pid);
-const allocationPoints = farms.map(farm => farm.weight);
-const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS); // Typically zero address
-const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typically false
+const poolIds = farms.map(farm => farm.pid).map(pid => parseInt(pid));
+const allocationPoints = farms.map(farm => farm.weight).map(weight => parseInt(weight));
+const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS).map(helpers.toChecksumAddress);
+const overwriteStatuses = farms.map(farm => farm.overwrite ?? false);
 
 /*
- * This is an example of updating farm weights via the multisig
+ * Update farm weights and rewarders via the multisig
  */
+verifyFarmsSyntax(farms);
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
     console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
@@ -47,21 +49,18 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typical
     const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, miniChefAddress);
 
     if (showOverview) {
-        const lpTokens = await miniChefContract.methods.lpTokens().call();
-        const poolInfos = await miniChefContract.methods.poolInfos().call();
+        const [ lpTokens, poolInfos ] = await Promise.all([
+            miniChefContract.methods.lpTokens().call(),
+            miniChefContract.methods.poolInfos().call(),
+        ]);
 
         const farmInfo = await Promise.all(lpTokens.map(async (pglAddress, i) => {
             if (!farms.some(farm => farm.pid === i)) return {};
 
             const pglContract = new web3.eth.Contract(ABI.PAIR, pglAddress);
-            const [token0, token1] = await Promise.all([
-                pglContract.methods.token0().call(),
-                pglContract.methods.token1().call(),
-            ]);
-
             const [token0Symbol, token1Symbol] = await Promise.all([
-                new web3.eth.Contract(ABI.TOKEN, token0).methods.symbol().call(),
-                new web3.eth.Contract(ABI.TOKEN, token1).methods.symbol().call(),
+                pglContract.methods.token0().call().then(helpers.getSymbolCached),
+                pglContract.methods.token1().call().then(helpers.getSymbolCached),
             ]);
 
             return {
@@ -85,10 +84,12 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typical
         });
 
         console.table(table);
-        console.log(`Updating ${farms.length} farms with a net weight change of ${netWeightDelta}`);
+        console.log(`Parsed changes to update ${farms.length} ${farms.length === 1 ? 'farm' : 'farms'} with a net weight change of ${netWeightDelta}`);
 
-        console.log(`Pausing for 15 seconds ...`);
-        await new Promise((resolve) => setTimeout(resolve, 15 * 1000));
+        if (!bytecodeOnly) {
+            console.log(`Pausing for 15 seconds ...`);
+            await new Promise((resolve) => setTimeout(resolve, 15 * 1000));
+        }
     }
 
     const tx = miniChefContract.methods.setPools(
@@ -109,6 +110,8 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typical
         console.log(`Skipping execution due to 'bytecodeOnly' config`);
         return;
     }
+
+    console.log(`Proposing tx to update ${farms.length} farms ...`);
 
     switch (multisigType) {
         case CONSTANTS.GNOSIS_MULTISIG:
@@ -145,3 +148,63 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false); // Typical
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });
+
+
+function verifyFarmsSyntax(farms) {
+    if (!Array.isArray(farms)) {
+        throw new Error(`Invalid farms syntax. Expected an array`);
+    }
+
+    for (const farm of farms) {
+        if (typeof farm !== 'object') {
+            throw new Error(`Invalid farm syntax. Expected an object`);
+        }
+
+        if (farm.pid === undefined) {
+            throw new Error(`Missing farm key: 'pid'`);
+        }
+        if (typeof farm.pid !== 'number') {
+            throw new Error(`Invalid 'pid' value: ${farm.pid}`);
+        }
+        if (isNaN(farm.pid)) {
+            throw new Error(`Farm 'pid' must be a valid number`);
+        }
+        if (!Number.isInteger(farm.pid)) {
+            throw new Error(`Farm 'pid' must be a valid integer`);
+        }
+        if (farm.pid < 0) {
+            throw new Error(`Farm 'pid' must be a positive number`);
+        }
+
+        if (farm.weight === undefined) {
+            throw new Error(`Missing farm key: 'weight'`);
+        }
+        if (typeof farm.weight !== 'number') {
+            throw new Error(`Invalid 'weight' value: ${farm.weight}`);
+        }
+        if (isNaN(farm.weight)) {
+            throw new Error(`Farm 'weight' must be a valid number`);
+        }
+        if (!Number.isInteger(farm.weight)) {
+            throw new Error(`Farm 'weight' must be a valid integer`);
+        }
+        if (farm.weight < 0) {
+            throw new Error(`Farm 'weight' must be a positive number`);
+        }
+
+        if (farm.rewarder !== undefined) {
+            if (typeof farm.rewarder !== 'string') {
+                throw new Error(`Invalid 'rewarder' value: ${farm.rewarder}`);
+            }
+            if (!web3.utils.isAddress(farm.rewarder.toLowerCase())) {
+                throw new Error(`Farm 'rewarder' must be an address`);
+            }
+        }
+
+        if (farm.overwrite !== undefined) {
+            if (typeof farm.overwrite !== 'boolean') {
+                throw new Error(`Invalid 'overwrite' value: ${farm.overwrite}`);
+            }
+        }
+    }
+}

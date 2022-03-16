@@ -2,8 +2,8 @@ const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
+const helpers = require('../core/helpers');
 
-const symbolCache = {};
 const chunkSize = 10;
 
 /*
@@ -36,8 +36,8 @@ const chunkSize = 10;
     async function lookup(pid, pgl) {
         const pglContract = new web3.eth.Contract(ABI.PAIR, pgl);
         const [token0Symbol, token1Symbol, rewarder] = await Promise.all([
-            pglContract.methods.token0().call().then(getSymbol),
-            pglContract.methods.token1().call().then(getSymbol),
+            pglContract.methods.token0().call().then(helpers.getSymbolCached),
+            pglContract.methods.token1().call().then(helpers.getSymbolCached),
             miniChefContract.methods.rewarder(pid).call(),
         ]);
 
@@ -52,11 +52,5 @@ const chunkSize = 10;
         });
 
         totalAllocPoints += parseInt(poolInfos[pid].allocPoint);
-    }
-
-    async function getSymbol(address) {
-        if (symbolCache[address]) return symbolCache[address];
-        const contract = new web3.eth.Contract(ABI.TOKEN, address);
-        return symbolCache[address] = await contract.methods.symbol().call();
     }
 })();

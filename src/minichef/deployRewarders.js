@@ -30,7 +30,7 @@ const rewarders = [
 
 
 /*
- * Deploys rewarders required for each SuperFarm
+ * Deploy rewarders required for each SuperFarm
  */
 verifyRewardersSyntax(rewarders);
 (async () => {
@@ -73,6 +73,9 @@ verifyRewardersSyntax(rewarders);
             funding: r.funding,
             adjustedFunding: rewardFundingAmounts[i],
         })));
+
+        console.log(`Pausing for 15 seconds ...`);
+        await new Promise(resolve => setTimeout(resolve, 15 * 1000));
 
         const deployTx = rewarderViaMultiplierContract.deploy({
             data: BYTECODE.REWARDER_VIA_MULTIPLIER,
@@ -157,6 +160,10 @@ verifyRewardersSyntax(rewarders);
     });
 
 function verifyRewardersSyntax(rewarders) {
+    if (!Array.isArray(rewarders)) {
+        throw new Error(`Invalid rewarders syntax. Expected an array`);
+    }
+
     for (const rewarder of rewarders) {
         if (!Array.isArray(rewarder)) {
             throw new Error(`Invalid rewarder syntax. Expected an array`);
@@ -176,6 +183,7 @@ function verifyRewardersSyntax(rewarders) {
             if (!web3.utils.isAddress(reward.rewardAddress.toLowerCase())) {
                 throw new Error(`Reward 'rewardAddress' must be an address`);
             }
+
             if (reward.multiplier === undefined) {
                 throw new Error(`Missing reward key: 'multiplier'`);
             }
@@ -191,6 +199,7 @@ function verifyRewardersSyntax(rewarders) {
             if (reward.multiplier < 0) {
                 throw new Error(`Reward 'multiplier' must be a positive number`);
             }
+
             if (reward.funding === undefined) {
                 throw new Error(`Missing reward key: 'funding'`);
             }

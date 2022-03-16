@@ -5,6 +5,7 @@ const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
+const helpers = require('../core/helpers');
 
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,7 @@ let endingAvax;
 const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
+const showOverview = true;
 const bytecodeOnly = false;
 const farms = [
     {
@@ -30,18 +32,53 @@ const farms = [
 // --------------------------------------------------
 
 
-const pglAddresses = farms.map(farm => farm.pgl);
-const allocationPoints = farms.map(farm => farm.weight);
-const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS); // Typically zero address
+const pglAddresses = farms.map(farm => farm.pgl).map(helpers.toChecksumAddress);
+const allocationPoints = farms.map(farm => farm.weight).map(weight => parseInt(weight));
+const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRESS).map(helpers.toChecksumAddress);
 
 /*
- * This is an example of adding farms via the multisig
+ * Add farms via the multisig
  */
+verifyFarmsSyntax(farms);
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
     console.log(`Starting AVAX: ${startingAvax / (10 ** 18)}`);
 
     const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, miniChefAddress);
+
+    if (showOverview) {
+        const tokenInfo = await Promise.all(pglAddresses.map(async (pglAddress) => {
+            const pglContract = new web3.eth.Contract(ABI.PAIR, pglAddress);
+            const [token0Symbol, token1Symbol] = await Promise.all([
+                pglContract.methods.token0().call().then(helpers.getSymbolCached),
+                pglContract.methods.token1().call().then(helpers.getSymbolCached),
+            ]);
+
+            return {
+                token0Symbol,
+                token1Symbol,
+            };
+        }));
+
+        let weightDelta = 0;
+
+        const table = farms.map((farm, i) => {
+            weightDelta += allocationPoints[i];
+            return {
+                'Farm': `${tokenInfo[i].token0Symbol}-${tokenInfo[i].token1Symbol}`,
+                'Weight': allocationPoints[i],
+                'Rewarder': rewarderAddresses[i],
+            };
+        });
+
+        console.table(table);
+        console.log(`Parsed changes to add ${farms.length} ${farms.length === 1 ? 'farm' : 'farms'} with a net weight change of ${weightDelta}`);
+
+        if (!bytecodeOnly) {
+            console.log(`Pausing for 15 seconds ...`);
+            await new Promise((resolve) => setTimeout(resolve, 15 * 1000));
+        }
+    }
 
     const tx = miniChefContract.methods.addPools(
         allocationPoints,
@@ -60,6 +97,8 @@ const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRES
         console.log(`Skipping execution due to 'bytecodeOnly' config`);
         return;
     }
+
+    console.log(`Proposing tx to add ${farms.length} farms ...`);
 
     switch (multisigType) {
         case CONSTANTS.GNOSIS_MULTISIG:
@@ -96,3 +135,53 @@ const rewarderAddresses = farms.map(farm => farm.rewarder ?? ADDRESS.ZERO_ADDRES
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });
+
+function verifyFarmsSyntax(farms) {
+    if (!Array.isArray(farms)) {
+        throw new Error(`Invalid farms syntax. Expected an array`);
+    }
+
+    for (const farm of farms) {
+        if (typeof farm !== 'object') {
+            throw new Error(`Invalid farm syntax. Expected an object`);
+        }
+
+        if (farm.pgl === undefined) {
+            throw new Error(`Missing farm key: 'pgl'`);
+        }
+        if (typeof farm.pgl !== 'string') {
+            throw new Error(`Invalid 'pgl' value: ${farm.pgl}`);
+        }
+        if (!web3.utils.isAddress(farm.pgl.toLowerCase())) {
+            throw new Error(`Farm 'pgl' must be an address`);
+        }
+        if (farm.pgl === ADDRESS.ZERO_ADDRESS) {
+            throw new Error(`Farm 'pgl' cannot be the zero address`);
+        }
+
+        if (farm.weight === undefined) {
+            throw new Error(`Missing farm key: 'weight'`);
+        }
+        if (typeof farm.weight !== 'number') {
+            throw new Error(`Invalid 'weight' value: ${farm.weight}`);
+        }
+        if (isNaN(farm.weight)) {
+            throw new Error(`Farm 'weight' must be a valid number`);
+        }
+        if (!Number.isInteger(farm.weight)) {
+            throw new Error(`Farm 'weight' must be a valid integer`);
+        }
+        if (farm.weight < 0) {
+            throw new Error(`Farm 'weight' must be a positive number`);
+        }
+
+        if (farm.rewarder !== undefined) {
+            if (typeof farm.rewarder !== 'string') {
+                throw new Error(`Invalid 'rewarder' value: ${farm.rewarder}`);
+            }
+            if (!web3.utils.isAddress(farm.rewarder.toLowerCase())) {
+                throw new Error(`Farm 'rewarder' must be an address`);
+            }
+        }
+    }
+}
