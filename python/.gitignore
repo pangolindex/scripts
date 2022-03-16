@@ -24,6 +24,7 @@ typings/
 
 # Config secrets
 config/config.js
+config.ini
 
 # Python
 __pycache__
