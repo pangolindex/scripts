@@ -60,7 +60,7 @@ Run the command bellow:
 `pip3 install -r requirements.txt`
 
 ## Config
-Copy the [config_example.ini](config_example.ini) to **config.ini** and edit items of section called [Twitter] to add your apis keys provided by twitter.
+Copy the [config_bot_example.ini](config_example.ini) to **config_bot.ini** and edit items of section called [Twitter] to add your apis keys provided by twitter.
 
 ![Image 1](https://i.imgur.com/CxqW7zg.png)
 

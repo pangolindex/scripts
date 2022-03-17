@@ -1,4 +1,4 @@
-import logging, os
+import logging, os, sys
 
 from configparser import RawConfigParser
 from tweepy import API, OAuthHandler
@@ -8,8 +8,12 @@ from src.utils.background_worker import BackgroundWorker
 
 from src.top_aprs.main import PERIOD as top_aprs_period, main as top_aprs
 
+if not os.path.exists("config_bot.ini"):
+    print("Please copy the config_bot_example.ini to config_bot.ini and add your Twitter api keys!")
+    sys.exit(0)
+
 config = RawConfigParser(allow_no_value=True)
-config.read("config.ini")
+config.read("config_bot.ini")
 
 log_level = config["Log"]["level"]
 name = config["Log"]["name"]
