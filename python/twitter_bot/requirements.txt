@@ -1,0 +1,5 @@
+gql
+Pillow
+requests_toolbelt
+tweepy
+Web3

@@ -6,6 +6,8 @@ This directory contains scripts to get a daily average of token transfers, mint/
 ## others
 This directory contains small scripts with various functions, see the [README](others/README.md) inside
 
+## twitter_bot
+This directory contains the code of pangolin twitter bot, see the [README](others/README.md) inside
 
 ## Run scripts w/ docker compose 
 It is also possible to launch environment locally with a simple docker compose command. It allows also to run the scripts on development servers or on services running docker containers. 

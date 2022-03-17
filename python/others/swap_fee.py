@@ -7,8 +7,7 @@ from datetime import datetime
 import pandas as pd
 import plotly.express as px
 
-sys.path.insert(1, '../holders/src')
-from graph import Graph
+from src.utils.graph import Graph
 
 app = dash.Dash(__name__)
 
