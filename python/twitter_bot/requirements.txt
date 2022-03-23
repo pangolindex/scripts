@@ -1,5 +1,5 @@
-gql
-Pillow
-requests_toolbelt
-tweepy
-Web3
+gql==3.1.0
+Pillow==9.0.1
+requests_toolbelt==0.9.1
+tweepy==4.6.0
+Web3==5.28.0
