@@ -1,4 +1,6 @@
-gql
+InquirerPy
+mongoengine
 pymongo
+prompt_toolkit
 web3
 dnspython

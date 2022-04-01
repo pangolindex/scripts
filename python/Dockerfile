@@ -1,4 +1,4 @@
-FROM python:3.9.2
+FROM python:3.10.2
 
 WORKDIR /packages
 COPY pango_helpers /packages/helpers

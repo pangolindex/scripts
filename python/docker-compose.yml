@@ -25,6 +25,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USR}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PWD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_URI: ${MONGO_URI}
     volumes:
       - mongodbdata:/data/db/
       - ./outputs:/workspace/outputs
