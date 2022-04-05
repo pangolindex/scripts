@@ -13,6 +13,12 @@ the funding of the rewarders. All configuration is done internally to the script
 ### `overview.js`
 Lists information about all pools in MiniChefV2 including the PGL, rewarder, tokens, and farm weight.
 
+### `superFarmCredits.js`
+Calculate reward credits (including credits) for all users who have interacted with a SuperFarm.
+
+### `unclaimedPNG.js`
+Calculate the total outstanding immediately claimable PNG base rewards for a MiniChef pool.
+
 ### `updateFarms.js`
 Modify the weights of farms and rewarder for SuperFarms. Changing a weight to `0` will effectively "remove" the farm. 
 All configuration is done internally to the script. The `util/miniChefOverview.js` script may prove helpful for 
