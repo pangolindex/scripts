@@ -6,8 +6,6 @@ const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 
-const fs = require('fs');
-const path = require('path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -16,61 +14,62 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const tokenAddress = ADDRESS.WAVAX;
-const spenderAddress = '0x0000000000000000000000000000000000000000';
-const allowanceAmount = '0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-
-const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
-const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const tokenAddresses = [
+  '0x0000000000000000000000000000000000000000',
+];
+const spender = '0x0000000000000000000000000000000000000000';
+const allowanceAmount = CONSTANTS.MAX_UINT256;
+const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_SAFE;
 // --------------------------------------------------
 
 
-/*
- * This is an example of approving an ERC20 token to be spent by the multisig
- */
 (async () => {
     startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
 
-    const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
+    for (const tokenAddress of tokenAddresses) {
+        const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
+        const [balance, allowance] = await Promise.all([
+            tokenContract.methods.balanceOf(multisigAddress).call().then(web3.utils.toBN),
+            tokenContract.methods.allowance(multisigAddress, spender).call().then(web3.utils.toBN),
+        ]);
+        if (balance.gt(allowance)) {
+            const nonce = await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending');
+            const tx = tokenContract.methods.approve(spender, allowanceAmount);
+            const bytecode = tx.encodeABI();
 
-    const tx = tokenContract.methods.approve(
-        spenderAddress,
-        allowanceAmount
-    );
+            console.log(`Proposing approval for ${tokenAddress} ...`);
 
-    console.log(`Encoding bytecode ...`);
-    const bytecode = tx.encodeABI();
-    const fileOutput = `./${path.basename(__filename, '.js')}-bytecode.txt`;
-    fs.writeFileSync(fileOutput, bytecode);
-    console.log(`Encoded bytecode to ${fileOutput}`);
-    console.log();
+            switch (multisigType) {
+                case CONSTANTS.GNOSIS_MULTISIG:
+                    const receipt = await gnosisMultisigPropose({
+                        multisigAddress,
+                        destination: tokenAddress,
+                        value: 0,
+                        bytecode,
+                        nonce,
+                    });
 
-    switch (multisigType) {
-        case CONSTANTS.GNOSIS_MULTISIG:
-            const receipt = await gnosisMultisigPropose({
-                multisigAddress,
-                destination: tokenAddress,
-                value: 0,
-                bytecode,
-            });
-
-            if (!receipt?.status) {
-                console.log(receipt);
-                process.exit(1);
-            } else {
-                console.log(`Transaction hash: ${receipt.transactionHash}`);
+                    if (!receipt?.status) {
+                        console.log(receipt);
+                        process.exit(1);
+                    } else {
+                        console.log(`Transaction hash: ${receipt.transactionHash}`);
+                    }
+                    break;
+                case CONSTANTS.GNOSIS_SAFE:
+                    await gnosisSafePropose({
+                        multisigAddress,
+                        destination: tokenAddress,
+                        value: 0,
+                        bytecode,
+                        nonce,
+                    });
+                    break;
+                default:
+                    throw new Error(`Unknown multisig type: ${multisigType}`);
             }
-            break;
-        case CONSTANTS.GNOSIS_SAFE:
-            await gnosisSafePropose({
-                multisigAddress,
-                destination: tokenAddress,
-                value: 0,
-                bytecode,
-            });
-            break;
-        default:
-            throw new Error(`Unknown multisig type: ${multisigType}`);
+        }
     }
 })()
     .catch(console.error)

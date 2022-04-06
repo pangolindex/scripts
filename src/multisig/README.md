@@ -16,7 +16,7 @@ This is a relic of a former task which will likely not be replicated. The old co
 called upon and modified.
 
 ### `tokenApprove.js`
-Approves a token for use from a multisig. This can only be done by members of the multisig. All configuration is done 
+Approves tokens for use from a multisig. This can only be done by members of the multisig. All configuration is done 
 internal to the script. If the approval amount is not modified, a default approval of infinite will be performed.
 
 ### `tokenTransfer.js`
