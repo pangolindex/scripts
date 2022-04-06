@@ -3,6 +3,7 @@ const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
+const Conversion = require('../core/conversion');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 
@@ -18,7 +19,7 @@ let endingAvax;
 // --------------------------------------------------
 const tokenAddress = '0x0000000000000000000000000000000000000000';
 const recipientAddress = '0x0000000000000000000000000000000000000000';
-const tokenAmount = '1' + '0'.repeat(18);
+const tokenAmount = 100;
 
 const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
@@ -33,9 +34,12 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 
     const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
 
+    const decimals = parseInt(await tokenContract.methods.decimals().call());
+    const adjustedTokenAmount = Conversion.convertFloatToString(tokenAmount, decimals);
+
     const tx = tokenContract.methods.transfer(
         recipientAddress,
-        tokenAmount
+        adjustedTokenAmount,
     );
 
     console.log(`Encoding bytecode ...`);
