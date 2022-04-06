@@ -65,12 +65,7 @@ const confirm = async ({ multisigAddress, safeTxHash }) => {
     return await safeService.confirmTransaction(safeTxHash, safeSignature.data);
 };
 
-/*
- * TODO: Currently not functioning and is a WiP...
- */
 const execute = async ({ multisigAddress, safeTxHash }) => {
-
-    throw new Error(`Gnosis safe execution is not yet supported!`);
 
     const safeSdk = await Safe.create({
         ethAdapter: adapter,
@@ -78,22 +73,38 @@ const execute = async ({ multisigAddress, safeTxHash }) => {
     });
 
     const safeMultisigTransactionResponse = await safeService.getTransaction(safeTxHash);
+
+    if (safeMultisigTransactionResponse.isExecuted) {
+        console.log(`Skipping ${safeTxHash} due to prior execution`);
+        return;
+    }
+
     const safeTransaction = await safeSdk.createTransaction(safeMultisigTransactionResponse);
 
-    const currentSafeNonce = 0;
-    const pendingTransactions = await safeService.getPendingTransactions(multisigAddress, currentSafeNonce);
+    const pendingTransactions = await safeService.getPendingTransactions(multisigAddress);
     const pendingTransaction = pendingTransactions.results.find(x => x.safeTxHash === safeTxHash);
 
     if (!pendingTransaction) throw new Error('Missing transaction!');
 
-    for (const confirmation of pendingTransaction.confirmations) {
-        const signature = new EthSignSignature(confirmation.owner, confirmation.signature)
-        safeTransaction.addSignature(signature);
+    const confirmations = pendingTransaction.confirmations.sort((a,b) => a.owner > b.owner ? 1 : -1);
+
+    for (const confirmation of confirmations) {
+        const safeSignature = new EthSignSignature(confirmation.owner, confirmation.signature)
+        safeTransaction.addSignature(safeSignature);
     }
+
+    const baseGasPrice = await web3.eth.getGasPrice();
 
     console.log(`Executing safe transaction hash ${safeTxHash} ...`);
 
-    return await safeSdk.executeTransaction(safeTransaction); // return.hash
+    const result = await safeSdk.executeTransaction(
+        safeTransaction,
+        {
+            maxFeePerGas: baseGasPrice * 2,
+            maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+        }
+    );
+    return new Promise((resolve) => result.promiEvent.once('receipt', resolve));
 };
 
 module.exports = {

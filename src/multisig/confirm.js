@@ -14,12 +14,16 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-// Note: when using a gnosis multisig, these will be IDs vs. hashes when using a gnosis safe
-const IDs = createArrayOfNumbers(13, 13); // Note: Range is inclusive
+// Note: Gnosis Safe: IDs will be transaction hashes
+const IDs = [
+    '0xce926df4c5622dbb4beaaefb47dd82c659e241dbc11f1bf5c2f2f754204571ee',
+];
+// Note: Gnosis Multisig: IDs will be transaction ids
+// const IDs = createArrayOfNumbers(1, 1); // Note: Range is inclusive
 const includeExtraGas = true;
 
-const multisigAddress = ADDRESS.PANGOLIN_MULTISIG_ADDRESS;
-const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_SAFE;
 // --------------------------------------------------
 
 
