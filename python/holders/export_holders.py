@@ -9,7 +9,7 @@ from web3.middleware import geth_poa_middleware
 from src.airdrop import AIRDROP_CATEGORIES, get_config_from_file
 from src.database.database import Database
 
-def total(database: Database, path: str) -> None:
+def total(database: Database, path: str, config: dict[str, any]) -> None:
     """This function will calculate the total amount for each category
 
     Args:
@@ -22,9 +22,12 @@ def total(database: Database, path: str) -> None:
         # Write header
         writer.writerow(["category", "total"])
 
-        rows = [
-            [category, database.total_amount_category(category)] for category in AIRDROP_CATEGORIES
-        ]
+        rows = []
+        for category in AIRDROP_CATEGORIES:
+            if category not in config:
+                continue  # Skip categories that are not in config
+            amount = Web3.fromWei(database.total_amount_category(category), config["unit"])
+            rows.append([category, amount])
         # Write a row to the csv file
         writer.writerows(rows)
 
@@ -41,16 +44,17 @@ def airdrop_results(path: str, config: dict[str, any], database: Database) -> No
             f"amount_from_{category}"
             for category in selected_categories
         ]
-        header = ["airdrop_id", "address", "total_amount", *categories]
+        header = ["airdrop_name", "airdrop_id", "address", "total_amount", *categories]
         writer.writerow(header)
         results = database.total_airdrop_result(config['id'], selected_categories)
 
         for result in results:
-            row = [config["id"], result["_id"], result["total_amount"]]
-            row.extend(result[category] for category in selected_categories)
+            amount = Web3.fromWei(result["total_amount"], config["unit"])
+            row = [config["name"], config["id"], result["_id"], amount]
+            row.extend(Web3.fromWei(result[category], config["unit"]) for category in selected_categories)
             writer.writerow(row)
 
-def create_category_csv(database: Database, path: str, category: str, days: int) -> None:
+def create_category_csv(database: Database, path: str, category: str, days: int, unit: str) -> None:
     """This function will create a csv file with the holders of a category
 
     Args:
@@ -68,8 +72,9 @@ def create_category_csv(database: Database, path: str, category: str, days: int)
         results = database.category_address_sum(category)
         
         def format_to_csv(value: dict[str, any]) -> list[str | float]:
-            day_average = 0 if (days == 0) else value["amount"]/days
-            return [value["_id"], value["amount"], day_average]
+            amount = Web3.fromWei(value["amount"], unit)
+            day_average = 0 if (days == 0) else amount/days
+            return [value["_id"], amount, day_average]
 
         if results:
             rows = [format_to_csv(result) for result in results]
@@ -98,7 +103,7 @@ def export(config: dict[str, any]) -> None:
     w3 = Web3(HTTPProvider(config["blockchain"]["rpc"]))
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    total(database, path)
+    total(database, path, config)
 
     for category in AIRDROP_CATEGORIES:
         if category not in config:
@@ -110,7 +115,7 @@ def export(config: dict[str, any]) -> None:
         date_last = get_block_date(last_block, w3)
         total_days = abs((date_last-date).days)
         print(f"{category.capitalize()} total days: {total_days}")
-        create_category_csv(database, path, category, total_days)
+        create_category_csv(database, path, category, total_days, config["unit"])
 
     airdrop_results(path, config, database)
 
@@ -118,7 +123,5 @@ def export(config: dict[str, any]) -> None:
 
 if __name__ == "__main__":
     config_file = os.environ.get("AIRDROP_CONF")
-    if config_file is None:
-        config_file = "png_holders_1.ini"
     config = get_config_from_file(config_file)
     export(config)

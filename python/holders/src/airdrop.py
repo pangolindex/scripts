@@ -1,3 +1,6 @@
+import subprocess
+import re
+
 from configparser import RawConfigParser
 from InquirerPy import inquirer, prompt
 from InquirerPy.base.control import Choice
@@ -16,6 +19,9 @@ from src.utils.validate import validate_addres, validate_url
 
 PATH_CHAINS = join(PATH_ABS, "src/constants/chains.json")
 PATH_AIRDROPS_CONFIG = join(PATH_ABS, "airdrops")
+
+def get_git_revision_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 def update_chains(chains: dict[str, any]) -> None:
     with open(PATH_CHAINS, 'w') as file:
@@ -86,7 +92,9 @@ def get_config_from_file(file: str = None) -> dict[str, any]:
     config_file.read(join(PATH_AIRDROPS_CONFIG, file))
 
     config = {
-        "id": config_file["airdrop"]["id"]
+        "id": config_file["airdrop"]["id"],
+        "name": config_file["airdrop"]["name"],
+        "unit": config_file["airdrop"]["unit"]
     }
     
     chains = get_chains()
@@ -128,6 +136,9 @@ def save_config_to_file(config: dict[str, any]) -> None:
 
     config_file.add_section("airdrop")
     config_file.set('airdrop', 'id', config["id"])
+    config_file.set('airdrop', 'name', config_name)
+    config_file.set('airdrop', 'commit_id', get_git_revision_hash())
+    config_file.set('airdrop', 'unit', config["unit"])
 
     config_file.add_section("blockchain")
     config_file.set("blockchain", "blockchain", config["blockchain"]["name"])
@@ -142,8 +153,9 @@ def save_config_to_file(config: dict[str, any]) -> None:
             config_file.set(section, "address", address)
             config_file.set(section, "start_block", config[section]["start_block"])
             config_file.set(section, "last_block", config[section]["last_block"])
-
-    path = join(PATH_AIRDROPS_CONFIG, f"{config_name}.ini")
+            
+    file_name = re.sub("\s+", "_", config_name)
+    path = join(PATH_AIRDROPS_CONFIG, f"{file_name}.ini")
     with open(path, 'w') as file:
         config_file.write(file)
 
@@ -248,7 +260,14 @@ def create_airdrop_config() -> dict[str, any]:
             "start_block": start_block,
             "last_block": last_block
         }
-        
+
+    unit = inquirer.select(
+        message="Select the unit of amount:",
+        choices=["ether", "gwei", "wei"],
+        default='ether',
+    ).execute()
+    config["unit"] = unit
+
     config["id"] = str(uuid5(NAMESPACE_DNS, dumps(config, sort_keys=True)))
     print("Airdrop Config:")
     print(dumps(config, indent=4, sort_keys=True))

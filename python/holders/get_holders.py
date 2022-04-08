@@ -51,7 +51,7 @@ def get_holders(config: dict[str, any]) -> None:
             categories_body.extend([vertical_line, body])
 
         module = importlib.import_module(f"src.categories.{category}")
-        num_workers = config_parser.getint("GetHolders", f"threads_{category}")
+        num_workers = config_parser.getint("Config", f"threads_{category}")
 
         q = Queue()
         for i in range(start_block, last_block, INTERVAL_BLOCKS):
@@ -99,7 +99,5 @@ def get_holders(config: dict[str, any]) -> None:
 
 if __name__ == "__main__":
     config_file = os.environ.get("AIRDROP_CONF")
-    if config_file is None:
-        config_file = "png_holders_1.ini"
     config = get_config_from_file(config_file)
     get_holders(config)

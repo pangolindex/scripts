@@ -50,7 +50,7 @@ class Worker(BaseWoker):
         transfers = []
         for transaction in transactions:
             args = transaction["args"]
-            amount = float(Web3.fromWei(args["value"], 'ether'))
+            amount = int(args["value"])
             block_number = transaction["blockNumber"]
             from_address = args["from"]
             to_address = args["to"]

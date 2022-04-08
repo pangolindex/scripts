@@ -49,7 +49,7 @@ class Worker(BaseWoker):
         def format_to_db(transaction: any) -> Transaction:
             try:
                 args = transaction["args"]
-                amount = float(Web3.fromWei(args["amount0"], 'ether'))
+                amount = int(args["amount0"])
                 tx = self.web3.eth.get_transaction(transaction['transactionHash'])
                 address = tx["from"]
                 block_number = transaction["blockNumber"]

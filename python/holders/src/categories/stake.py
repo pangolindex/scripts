@@ -48,7 +48,7 @@ class Worker(BaseWoker):
         def format_to_db(transaction: any) -> Transaction:
             try:
                 args = transaction["args"]
-                amount = float(Web3.fromWei(args["amount"], 'ether'))
+                amount = int(args["amount"])
                 address = args["user"]
                 block_number = transaction["blockNumber"]
             except Exception as e:
