@@ -16,6 +16,7 @@ ARG PROJECT
 COPY ./$PROJECT/requirements.txt /workspace/requirements.txt
 RUN pip install --upgrade pip
 
+RUN mkdir /config
 RUN pip install -r requirements.txt
 
 
