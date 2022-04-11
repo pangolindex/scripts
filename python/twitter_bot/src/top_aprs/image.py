@@ -85,7 +85,7 @@ def create_image(farms: list[dict[str, any]]) -> BytesIO:
     num_lines = math.ceil(len(farms)/2)
     HEIGHT = 190*(num_lines) + 20*(num_lines-1)+40
     img = Image.new('RGBA', (1116, HEIGHT), '#111111')
-    
+
     num_lines = math.ceil(len(farms)/2)
     actual_farm = 0
     for i in range(num_lines):
@@ -97,6 +97,6 @@ def create_image(farms: list[dict[str, any]]) -> BytesIO:
             actual_farm += 1
 
     output = BytesIO()
-    img.show()
     img.save(output, format="PNG")
+    output.seek(0)
     return output

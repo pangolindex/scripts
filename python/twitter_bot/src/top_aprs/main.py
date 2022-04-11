@@ -17,11 +17,11 @@ logger = logging.getLogger()
 # Number of workers to work concurrent to get apr
 WORKERS = 40
 # Time period to tweet, in seconds
-PERIOD = 8*60*60
+PERIOD = 24*60*60
 # Number of top farms by apr
 NUMBER_FARMS = 6
 # Generate image to add in tweet
-GENERATE_IMAGE = False
+GENERATE_IMAGE = True
 
 w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
 w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -97,15 +97,20 @@ def get_pool_info(pools: list[str], aprs: list[dict[any]]) -> list[dict[str, any
             'apr': pool['apr']['combinedApr'],
             'token0': {
                 "address": Web3.toChecksumAddress(token0["id"]),
-                "symbol": token0["symbol"] if not is_avax(token0["id"]) else "AVAX",
+                "symbol": "AVAX"
+                if is_avax(token0["id"])
+                else token0["symbol"],
             },
             'token1': {
                 "address": Web3.toChecksumAddress(token1["id"]),
-                "symbol": token1["symbol"] if not is_avax(token1["id"]) else "AVAX",
+                "symbol": "AVAX"
+                if is_avax(token1["id"])
+                else token1["symbol"],
             },
             "tvl": float(result["pair"]["reserveUSD"]),
-            'rewards': rewards
+            'rewards': rewards,
         }
+
         pools_info.append(pool_info)
     return pools_info
 
@@ -113,7 +118,7 @@ def main(client: Client, api: API, user: dict[str, any]) -> None:
     pools = get_pools()
     aprs = get_top_aprs(pools)
     pools_info = get_pool_info(pools, aprs[:NUMBER_FARMS])
-    text = f"Top {len(pools_info)} farms of @pangolindex by APR.\n\n"
+    text = f"Top {len(pools_info)} farms on @pangolindex by APR.\n\n"
     for pool in pools_info:
         text += f'{pool["token0"]["symbol"]} - {pool["token1"]["symbol"]} = {pool["apr"]}%\n'
     text += "\n#Pangolindex #Avalanche"
@@ -126,7 +131,7 @@ def main(client: Client, api: API, user: dict[str, any]) -> None:
     if GENERATE_IMAGE:
         img = create_image(pools_info)
         media = api.media_upload('image.png', file=img)
-        tweet_params["media_ids"] = [media['media_id']]
+        tweet_params["media_ids"] = [media.media_id_string]
 
     response = client.create_tweet(**tweet_params)
     tweet_data = response.data
