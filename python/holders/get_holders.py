@@ -25,7 +25,7 @@ def get_holders(config: dict[str, any]) -> None:
     config_parser.read('config.ini')
 
     # MongoDB connection string
-    connection_string = os.environ.get("connection_string")
+    connection_string = os.environ.get("CONNECTION_STRING")
     if connection_string is None:
         connection_string = config_parser["Mongodb"]["connection_string"]
 

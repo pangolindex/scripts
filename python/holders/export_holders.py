@@ -84,10 +84,10 @@ def create_category_csv(database: Database, path: str, category: str, days: int,
 def export(config: dict[str, any]) -> None:
     # Load config
     config_parser = RawConfigParser()
-    config_parser.read('config.ini')
+    config_parser.read('airdrops/png_holders_1.ini')
 
     # MongoDB connection string
-    connection_string = os.environ.get("connection_string")
+    connection_string = os.environ.get("CONNECTION_STRING")
     if connection_string is None:
         connection_string = config_parser["Mongodb"]["connection_string"]
 
