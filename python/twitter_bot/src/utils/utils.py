@@ -8,7 +8,7 @@ from src.constants.config import PATH_ABS
 from src.constants.tokens import PNG, WAVAX
 
 PATH_DATA = os.path.join(PATH_ABS, "src/data")
-PATH_FONT = os.path.join(PATH_DATA, "fonts/Poppins.ttf")
+PATH_FONTS = os.path.join(PATH_DATA, "fonts")
 PATH_IMAGE = os.path.join(PATH_DATA, "images")
 
 
