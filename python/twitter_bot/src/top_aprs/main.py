@@ -1,23 +1,25 @@
-import json, logging, requests
+import logging
 
-from io import BytesIO
 from queue import Queue
-from threading import Thread
 from tweepy import API, Client
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
+from src.classes.token import Token
 from src.constants.config import ABIS, ADRESSES
-from src.top_aprs.image import create_image, is_avax
+from src.constants.tokens import PNG
+from src.top_aprs.image import create_image
 from src.top_aprs.get_apr_worker import Worker
 from src.utils.graph import Graph
+from src.utils.utils import is_avax
 
 logger = logging.getLogger()
 
 # Number of workers to work concurrent to get apr
 WORKERS = 40
 # Time period to tweet, in seconds
-PERIOD = 24*60*60
+# 1 day
+PERIOD = 1*24*60*60
 # Number of top farms by apr
 NUMBER_FARMS = 6
 # Generate image to add in tweet
@@ -55,59 +57,66 @@ def get_top_aprs(pools: list[str]) -> list[dict[str, any]]:
 
     return r
 
-def get_pool_info(pools: list[str], aprs: list[dict[any]]) -> list[dict[str, any]]:
+def get_pool_info(pools: list[str], farms: list[dict[any]]) -> list[dict[str, any]]:
     graph = Graph("https://api.thegraph.com/subgraphs/name/pangolindex/exchange")
-    query_str = """
-        query($id: String!){
-            pair(id: $id){
-                token0{
-                    symbol
-                    id
-                }
-                token1{
-                    symbol
-                    id
-                }
-                reserveUSD
-            }
-        }
-    """
+
+    template = '''
+        pool_{0}: pair(id: "{0}"){{
+            token0{{
+                symbol
+                id
+                name
+            }}
+            token1{{
+                symbol
+                id
+                name
+            }}
+            reserveUSD
+        }}
+    '''
+
+    query_str = "{"
+    for farm in farms:
+        address = pools[farm['pid']]
+        query_str += template.format(address.lower())
+    query_str += "}"
+
+    results = graph.query(query_str)
+
     pools_info = []
-    for pool in aprs:
-        pid = pool['pid']
+    for farm in farms:
+        pid = farm['pid']
         address = pools[pid]
-        params = {
-            'id': address.lower()
-        }
-        result = graph.query(query_str, params)
+        result = results[f"pool_{address.lower()}"]
         rewarder = MINICHEF.functions.rewarder(pid).call()
-        rewards = ["0x60781C2586D68229fde47564546784ab3fACA982"]
+        rewards = [PNG]
         if rewarder != "0x0000000000000000000000000000000000000000":
             rewarder_contract = w3.eth.contract(rewarder, abi=ABIS["REWARDER_VIA_MULTIPLIER"])
             reward_tokens = rewarder_contract.functions.getRewardTokens().call()
+            reward_tokens = map(lambda x: Token(address=x), reward_tokens)
             rewards.extend(reward_tokens)
 
-        token0 = result["pair"]["token0"]
-        token1 = result["pair"]["token1"]
-        if is_avax(token0["id"]):
+        token0 = Token(
+            name = result["token0"]["name"],
+            symbol = "AVAX" if is_avax(result["token0"]["id"]) else result["token0"]["symbol"], 
+            address = result["token0"]["id"],
+        )
+        token1 = Token(
+            name = result["token1"]["name"],
+            symbol = "AVAX" if is_avax(result["token1"]["id"]) else result["token1"]["symbol"],
+            address = result["token1"]["id"],
+        )
+
+        if is_avax(token0.address):
             token1, token0 = token0, token1
 
         pool_info = {
-            'pid': pool["pid"],
-            'apr': pool['apr']['combinedApr'],
-            'token0': {
-                "address": Web3.toChecksumAddress(token0["id"]),
-                "symbol": "AVAX"
-                if is_avax(token0["id"])
-                else token0["symbol"],
-            },
-            'token1': {
-                "address": Web3.toChecksumAddress(token1["id"]),
-                "symbol": "AVAX"
-                if is_avax(token1["id"])
-                else token1["symbol"],
-            },
-            "tvl": float(result["pair"]["reserveUSD"]),
+            'pid': pid,
+            'apr': farm['apr']['combinedApr'],
+            'token0': token0,
+            'token1': token1,
+            "tvl": float(result["reserveUSD"]),
             'rewards': rewards,
         }
 
@@ -115,12 +124,14 @@ def get_pool_info(pools: list[str], aprs: list[dict[any]]) -> list[dict[str, any
     return pools_info
 
 def main(client: Client, api: API, user: dict[str, any]) -> None:
-    pools = get_pools()
-    aprs = get_top_aprs(pools)
-    pools_info = get_pool_info(pools, aprs[:NUMBER_FARMS])
+    pools = get_pools() # get all pools from minichef
+    farms = get_top_aprs(pools) # get the aprs from minicheft pools and sort by apr
+    pools_info = get_pool_info(pools, farms[:NUMBER_FARMS])
     text = f"Top {len(pools_info)} farms on @pangolindex by APR.\n\n"
     for pool in pools_info:
-        text += f'{pool["token0"]["symbol"]} - {pool["token1"]["symbol"]} = {pool["apr"]}%\n'
+        token0: Token = pool['token0']
+        token1: Token = pool['token1']
+        text += f'{token0.symbol} - {token1.symbol} = {pool["apr"]}%\n'
     text += "\n#Pangolindex #Avalanche"
 
     tweet_params = {

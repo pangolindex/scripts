@@ -1,7 +1,7 @@
 import logging, os, sys
 
 from configparser import RawConfigParser
-from tweepy import API, OAuthHandler
+from traceback import format_exc
 
 from src.utils.client import create_client
 from src.utils.background_worker import BackgroundWorker
@@ -50,6 +50,7 @@ def main() -> None:
         print("Exiting...")
     except Exception as e:
         logger.error(str(e))
+        logger.error(format_exc())
 
 if __name__ == "__main__":
     main()
