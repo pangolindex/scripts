@@ -17,10 +17,7 @@ class Worker(Thread):
                 kargs: dict[string, any]
             }
         """
-        while True:
-            if(self.queue.empty()):
-                break
-
+        while not (self.queue.empty()):
             pid = self.queue.get()
             try:
                 response = requests.get(f'https://api.pangolin.exchange/pangolin/apr2/{pid}')

@@ -6,7 +6,7 @@ from traceback import format_exc
 from src.utils.client import create_client
 from src.utils.background_worker import BackgroundWorker
 
-from src.top_aprs.main import PERIOD as top_aprs_period, main as top_aprs
+from src.top_farms.main import PERIOD as top_farms_period, main as top_farms
 
 if not os.path.exists("config_bot.ini"):
     print("Please copy the config_bot_example.ini to config_bot.ini and add your Twitter api keys!")
@@ -42,8 +42,8 @@ def main() -> None:
     print(f"Twitter bot connected with @{user['username']}")
     tasks = []
     try:
-        top_apr_task = BackgroundWorker(top_aprs_period, top_aprs, client, api, user) 
-        tasks.append(top_apr_task)
+        top_farms_task = BackgroundWorker(top_farms_period, top_farms, client, api, user) 
+        tasks.append(top_farms_task)
     except KeyboardInterrupt:
         print("Canceling all tasks")
         stop_tasks(tasks)

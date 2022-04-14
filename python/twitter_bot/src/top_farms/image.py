@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from src.classes.token import Token
 from src.utils.utils import human_format, get_logo, PATH_FONTS
+from src.top_farms.variations import Variation
 
 
 POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=24)
@@ -35,7 +36,7 @@ def create_card(farm: dict[str, any]) -> Image:
     draw.rounded_rectangle((0, 0, 1160, 100), fill='#1C1C1C', radius=5)
     token0: Token = farm["token0"]
     token1: Token = farm["token1"]
-    msg = f'{token0.symbol}-{token1.symbol}'
+    msg = f'{token0.symbol} - {token1.symbol}'
     _, h = draw.textsize(msg, POPPINS_BOLD)
 
     draw.text(
@@ -49,34 +50,38 @@ def create_card(farm: dict[str, any]) -> Image:
     card_img.paste(logo0, (10, 26), MASK)
     card_img.paste(logo1, (53, 26), MASK)
 
-    text = f'TVL {human_format(farm["tvl"])}'
+    text = f'TVL {human_format(farm["TVL"])}'
     _, h = draw.textsize(text, POPPINS)
     draw.text((400, (100-h)//2), text, (255, 255, 255), font=POPPINS)
+    
+    text = f'Total volume {human_format(farm["volume"])}'
+    _, h = draw.textsize(text, POPPINS)
+    draw.text((600, (100-h)//2), text, (255, 255, 255), font=POPPINS)
 
-    text = f'APR {farm["apr"]}%'
+    text = f'APR {farm["APR"]}%'
     w, h = draw.textsize(text, POPPINS)
     draw.text((1160-20-w, (100-h)//2), text, (255, 255, 255), font=POPPINS)
 
     if len(farm['rewards']) > 1:
-        card_img.paste(SUPERFARM, (700, 30), SUPERFARM)
+        card_img.paste(SUPERFARM, (900, 30), SUPERFARM)
 
     return card_img
 
 
-def create_image(farms: list[dict[str, any]]) -> BytesIO:
-    num_lines = len(farms)
-    HEIGHT = 100*(num_lines) + 20*(num_lines-1)+20+60
+def create_image(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+    HEIGHT = 100*(variation.number_farms) + 20*(variation.number_farms-1)+20+60
     img = Image.new('RGBA', (1200, HEIGHT), '#111111')
     draw = ImageDraw.Draw(img)
-    text = f"Top {num_lines} farms on Pangolin by apr."
+    text = variation.img_text()
     w, _ = draw.textsize(text, POPPINS)
     draw.text(((1200-w)/2, 20), text, (255, 255, 255), font=POPPINS)
-    for i in range(num_lines):
+    for i in range(variation.number_farms):
         card = create_card(farms[i])
         y = 100*i + 20*i + 60
         img.paste(card, (20, y), card)
 
     output = BytesIO()
     img.save(output, format="PNG")
+    img.show()
     output.seek(0)
     return output

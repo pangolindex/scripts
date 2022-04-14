@@ -5,7 +5,7 @@ This is the bot of [Pangolin Aprs](https://twitter.com/PangolinAPRs) account.
 You need to get api keys in [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard) and if you want to upload images, you will need to request [elevated access](https://developer.twitter.com/en/portal/products/elevated).
 
 This bot has the following functions:
-- **Tweet the top 6 aprs** of pangolin farms, every 8 hours
+- **Tweet the top farms** of pangolin farms, every 1 day, with variations: top 5 super farms by apr, top 10 farms and super farms by tvl, etc
 
 ## To add a new function
 You can create a folder inside [src](src/) folder and add your logic inside it, then you will need to import your logic in [main.py](main.py) and set the time that this code will be executed again.
@@ -29,8 +29,8 @@ from src.best_dex.main import main as best_dex # rename function to best_dex
 # ...
     tasks = []
     try:
-        top_apr_task = BackgroundWorker(top_aprs_period, top_aprs, client, api, user) 
-        tasks.append(top_apr_task)
+        top_farms_task = BackgroundWorker(top_farms_period, top_farms, client, api, user)
+        tasks.append(top_farms_task)
         #BackgroundWorker(interval, function, args of function)
         best_dex_task = BackgroundWorker(1*60*60, best_dex, client, api, user) 
         tasks.append(best_dex_task)

@@ -23,7 +23,7 @@ def human_format(num: float | int) -> str:
         num /= 1000
 
     magnitude = min(magnitude, 5)
-    letter = ['', 'K', 'M', 'G', 'T', 'P'][magnitude]
+    letter = ['', 'K', 'M', 'B', 'T', 'Q'][magnitude]
     return f'{num:.2f}{letter}'
 
 

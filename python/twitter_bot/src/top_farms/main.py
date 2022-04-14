@@ -8,8 +8,9 @@ from web3.middleware import geth_poa_middleware
 from src.classes.token import Token
 from src.constants.config import ABIS, ADRESSES
 from src.constants.tokens import PNG
-from src.top_aprs.image import create_image
-from src.top_aprs.get_apr_worker import Worker
+from src.top_farms.image import create_image
+from src.top_farms.variations import VARIATIONS, Variation, get_last_variation, set_last_variation
+from src.top_farms.get_apr_worker import Worker
 from src.utils.graph import Graph
 from src.utils.utils import is_avax
 
@@ -20,8 +21,6 @@ WORKERS = 40
 # Time period to tweet, in seconds
 # 1 day
 PERIOD = 1*24*60*60
-# Number of top farms by apr
-NUMBER_FARMS = 10
 # Generate image to add in tweet
 GENERATE_IMAGE = True
 
@@ -32,7 +31,7 @@ MINICHEF = w3.eth.contract(ADRESSES["PANGOLIN_MINICHEF_V2_ADDRESS"], abi=ABIS["M
 def get_pools() -> list[str]:
     return MINICHEF.functions.lpTokens().call()
 
-def get_top_aprs(pools: list[str]) -> list[dict[str, any]]:    
+def get_aprs(pools: list[str]) -> list[dict[str, any]]:    
     queue = Queue(len(pools))
     for i in range(len(pools)):
         queue.put(i)
@@ -47,17 +46,17 @@ def get_top_aprs(pools: list[str]) -> list[dict[str, any]]:
         worker.join()
 
     r = []
+
     for worker in workers:
         r.extend(worker.results)
 
-    def sort_func(e: dict[str, any]):
-        return e['apr']['combinedApr']
-
-    r.sort(reverse=True, key=sort_func)
-
     return r
 
-def get_pool_info(pools: list[str], farms: list[dict[any]]) -> list[dict[str, any]]:
+def get_pool_info(
+    pools: list[str], 
+    farms: list[dict[any]], 
+    variation: Variation
+) -> list[dict[str, any]]:
     graph = Graph("https://api.thegraph.com/subgraphs/name/pangolindex/exchange")
 
     template = '''
@@ -73,6 +72,7 @@ def get_pool_info(pools: list[str], farms: list[dict[any]]) -> list[dict[str, an
                 name
             }}
             reserveUSD
+            volumeUSD
         }}
     '''
 
@@ -113,25 +113,40 @@ def get_pool_info(pools: list[str], farms: list[dict[any]]) -> list[dict[str, an
 
         pool_info = {
             'pid': pid,
-            'apr': farm['apr']['combinedApr'],
+            'APR': farm['apr']['combinedApr'],
             'token0': token0,
             'token1': token1,
-            "tvl": float(result["reserveUSD"]),
+            "TVL": float(result["reserveUSD"]),
+            "volume": float(result["volumeUSD"]),
             'rewards': rewards,
         }
 
         pools_info.append(pool_info)
-    return pools_info
+        
+    pools_info.sort(key=lambda x: x[variation.order_by], reverse=True)
 
-def main(client: Client, api: API, user: dict[str, any]) -> None:
+    if variation.only_super_farms:
+        pools_info = list(filter(lambda x: len(x['rewards'] )> 1, pools_info))
+    elif variation.only_farms:
+        pools_info = list(filter(lambda x: len(x['rewards']) == 1, pools_info))
+
+    return pools_info[:variation.number_farms]
+
+def main(
+    client: Client,
+    api: API, 
+    user: dict[str, any]
+) -> None:
+    last_variation = get_last_variation()
+    variation = VARIATIONS[last_variation]
     pools = get_pools() # get all pools from minichef
-    farms = get_top_aprs(pools) # get the aprs from minicheft pools and sort by apr
-    pools_info = get_pool_info(pools, farms[:NUMBER_FARMS])
-    text = f"Top {len(pools_info)} farms on @pangolindex by APR.\n\n"
+    farms = get_aprs(pools) # get the aprs from minicheft pools and sort by apr
+    pools_info = get_pool_info(pools, farms, variation)
+    text = f"{variation.text()}\n\n"
     for pool in pools_info:
         token0: Token = pool['token0']
         token1: Token = pool['token1']
-        text += f'${token0.symbol} - ${token1.symbol} = {pool["apr"]}%\n'
+        text += f'${token0.symbol} - ${token1.symbol}\n'
     text += "\n#Pangolindex #Avalanche"
 
     tweet_params = {
@@ -140,11 +155,12 @@ def main(client: Client, api: API, user: dict[str, any]) -> None:
     }
 
     if GENERATE_IMAGE:
-        img = create_image(pools_info)
+        img = create_image(pools_info, variation)
         media = api.media_upload('image.png', file=img)
         tweet_params["media_ids"] = [media.media_id_string]
 
     response = client.create_tweet(**tweet_params)
     tweet_data = response.data
-    print(f"New top {NUMBER_FARMS} aprs tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    logger.info(f"New top {NUMBER_FARMS} aprs tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    set_last_variation(last_variation+1)
