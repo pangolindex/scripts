@@ -78,6 +78,5 @@ def create_image(farms: list[dict[str, any]]) -> BytesIO:
 
     output = BytesIO()
     img.save(output, format="PNG")
-    img.show()
     output.seek(0)
     return output
