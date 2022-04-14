@@ -11,6 +11,12 @@ POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=24)
 POPPINS_14 = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=14)
 POPPINS_BOLD = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins-Bold.ttf"), size=28)
 
+def create_mask(size: tuple[int, int]) -> Image:
+    mask = Image.new('L', size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse((0, 0) + size, fill=255)
+    return mask
+
 def super_farm_card() -> Image:
     img = Image.new('RGBA', (100, 40), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -20,6 +26,7 @@ def super_farm_card() -> Image:
     draw.text(((100-w)/2, (40-h)//2), text, (0, 0, 0), font=POPPINS_14)
     return img
 
+MASK = create_mask((48,48))
 SUPERFARM = super_farm_card()
 
 def create_card(farm: dict[str, any]) -> Image:
@@ -39,8 +46,8 @@ def create_card(farm: dict[str, any]) -> Image:
     )
     logo0 = Image.open(get_logo(token0, 48)).convert("RGBA")
     logo1 = Image.open(get_logo(token1, 48)).convert("RGBA")
-    card_img.paste(logo0, (10, 26), logo0)
-    card_img.paste(logo1, (53, 26), logo1)
+    card_img.paste(logo0, (10, 26), MASK)
+    card_img.paste(logo1, (53, 26), MASK)
 
     text = f'TVL {human_format(farm["tvl"])}'
     _, h = draw.textsize(text, POPPINS)
