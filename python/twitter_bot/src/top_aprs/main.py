@@ -21,7 +21,7 @@ WORKERS = 40
 # 1 day
 PERIOD = 1*24*60*60
 # Number of top farms by apr
-NUMBER_FARMS = 6
+NUMBER_FARMS = 10
 # Generate image to add in tweet
 GENERATE_IMAGE = True
 
@@ -131,7 +131,7 @@ def main(client: Client, api: API, user: dict[str, any]) -> None:
     for pool in pools_info:
         token0: Token = pool['token0']
         token1: Token = pool['token1']
-        text += f'{token0.symbol} - {token1.symbol} = {pool["apr"]}%\n'
+        text += f'${token0.symbol} - ${token1.symbol} = {pool["apr"]}%\n'
     text += "\n#Pangolindex #Avalanche"
 
     tweet_params = {
