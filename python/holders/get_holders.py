@@ -12,7 +12,6 @@ from src.database.database import Database
 from src.ui import create_app, create_category_body, vertical_line
 from src.categories.worker import BaseWoker
 
-INTERVAL_BLOCKS = 10000
 
 def get_holders(config: dict[str, any]) -> None:
     """This script get all PNG transfers, Mint/Burn LP PNG/AVAX and Staking (AVAX, OOE, APEIN) and save in mongodb
@@ -28,6 +27,8 @@ def get_holders(config: dict[str, any]) -> None:
     connection_string = os.environ.get("CONNECTION_STRING")
     if connection_string is None:
         connection_string = config_parser["Mongodb"]["connection_string"]
+
+    interval_blocks = config_parser.getint("Config", "interval_blocks")
 
     # Database class
     database = Database(connection_string)
@@ -54,7 +55,7 @@ def get_holders(config: dict[str, any]) -> None:
         num_workers = config_parser.getint("Config", f"threads_{category}")
 
         q = Queue()
-        for i in range(start_block, last_block, INTERVAL_BLOCKS):
+        for i in range(start_block, last_block, interval_blocks):
             q.put(i)
 
         address = config[category]["address"]
@@ -71,7 +72,7 @@ def get_holders(config: dict[str, any]) -> None:
                 category = category,
                 airdrop_id = config["id"],
                 queue = q,
-                interval = INTERVAL_BLOCKS,
+                interval = interval_blocks,
                 last_block = last_block,
                 contract = contract,
                 database=database,
