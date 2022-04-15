@@ -107,10 +107,7 @@ class Worker(BaseWoker):
     def run(self):
         self.add_message(f"Running Worker_STAKING-{self.name}")
         self.stopped = False
-        while True:
-            if self.queue.empty():
-                break
-
+        while not self.queue.empty():
             if self.stopped:
                 return
 
@@ -120,11 +117,11 @@ class Worker(BaseWoker):
             #Get PNG balance from staked/withdrawn events in contract of Staking PNG
             transactions_staking = self.get_staked_transactions(fromblock, toblock)
             transactions_staking.extend(self.get_withdrawn_transactions(fromblock, toblock))
-            if len(transactions_staking) > 0:
-                transactions = self.format_staking_transactions(transactions_staking)
+            transactions = self.format_staking_transactions(transactions_staking)
+            if len(transactions) > 0:
                 self.count_tx_staking += len(transactions)
                 self.add_message(f"Worker_STAKING-{self.name} found {len(transactions)} staking transactions")
-                #self.database.insert_many_staking(transactions)
+                self.database.insert_many_transactions(transactions)
             self.update_progress_bar(toblock)
             self.queue.task_done()
         self.add_message(f"Worker_STAKING-{self.name} stopped")

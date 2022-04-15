@@ -112,10 +112,7 @@ class Worker(BaseWoker):
     def run(self):
         self.add_message(f"Running Worker_LP-{self.name}")
         self.stopped = False
-        while True:
-            if self.queue.empty():
-                break
-
+        while not self.queue.empty():
             if self.stopped:
                 return
 
@@ -125,8 +122,8 @@ class Worker(BaseWoker):
             #Get PNG balance from mint/burn events in contract of LP PNG/AVAX 
             transactions_lp = self.get_mint_transactions(fromblock, toblock)
             transactions_lp.extend(self.get_burn_transactions(fromblock, toblock))
-            if len(transactions_lp) > 0:
-                transactions = self.format_lp_transactions(transactions_lp)
+            transactions = self.format_lp_transactions(transactions_lp)
+            if len(transactions) > 0:
                 self.count_tx_lp += len(transactions)
                 self.add_message(f"Worker_LP-{self.name} found {len(transactions)} LP transactions")
                 self.database.insert_many_transactions(transactions)

@@ -101,18 +101,15 @@ class Worker(BaseWoker):
     def run(self):
         self.add_message(f"Running Worker_Transfers-{self.name}")
         self.stopped = False
-        while True:
-            if self.queue.empty():
-                break
-
+        while not self.queue.empty():
             if self.stopped:
                 return
 
             from_block = self.queue.get()
             to_block = min(from_block + self.interval, self.last_block)
             transactions = self.get_transfers(from_block, to_block)
-            if len(transactions) > 0:
-                transfers = self.format_transfers(transactions)
+            transfers = self.format_transfers(transactions)
+            if len(transfers) > 0:
                 self.count_tx_png_holders += len(transfers)
                 self.database.insert_many_transactions(transfers)
                 self.add_message(f"Worker_PNG-{self.name} found {len(transfers)} Token transfers")
