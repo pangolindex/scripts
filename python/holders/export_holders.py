@@ -1,6 +1,8 @@
+from calendar import c
 import csv
 import os
 
+from decimal import Decimal, getcontext
 from datetime import datetime
 from configparser import RawConfigParser
 from web3 import Web3, HTTPProvider
@@ -9,52 +11,34 @@ from web3.middleware import geth_poa_middleware
 from src.airdrop import AIRDROP_CATEGORIES, get_config_from_file
 from src.database.database import Database
 
-def total(database: Database, path: str, config: dict[str, any]) -> None:
+#PNG SUPPLY = 230M
+PNG_SUPPLY = Decimal(Web3.toWei(230e6, 'ether'))
+PERCENTAGE = Decimal(5)/Decimal(100)
+AIRDROP_AMOUNT = PNG_SUPPLY*PERCENTAGE # 5% of PNG Supply
+
+def total_categories(database: Database, path: str, airdrop_id: str, categories: list[str]) -> dict[str, Decimal]:
     """This function will calculate the total amount for each category
 
     Args:
         database (Database): database class
-        path (str): path to csv file
     """
     with open(os.path.join(path, "total.csv"), 'w') as f:
-        # Create the csv writer
         writer = csv.writer(f)
-        # Write header
-        writer.writerow(["category", "total"])
+        
+        total = {}
+        for category in categories:
+            total[category] = Decimal(database.total_amount_category(category, airdrop_id))
+            writer.writerow([category, total[category]])
+            
+        writer.writerow(["Total", sum(total.values())])
+        return total
 
-        rows = []
-        for category in AIRDROP_CATEGORIES:
-            if category not in config:
-                continue  # Skip categories that are not in config
-            amount = Web3.fromWei(database.total_amount_category(category), config["unit"])
-            rows.append([category, amount])
-        # Write a row to the csv file
-        writer.writerows(rows)
 
-def get_block_date(block_number: int, w3: Web3) -> str:
+def get_block_date(block_number: int, w3: Web3) -> datetime:
     block = w3.eth.get_block(block_number)
     return datetime.utcfromtimestamp(block.timestamp)
 
-def airdrop_results(path: str, config: dict[str, any], database: Database) -> None:
-    with open(os.path.join(path, "airdrops_results.csv"), 'w') as f:
-        writer = csv.writer(f)
-        selected_categories = [category for category in AIRDROP_CATEGORIES if category in config]
-
-        categories = [
-            f"amount_from_{category}"
-            for category in selected_categories
-        ]
-        header = ["airdrop_name", "airdrop_id", "address", "total_amount", *categories]
-        writer.writerow(header)
-        results = database.total_airdrop_result(config['id'], selected_categories)
-
-        for result in results:
-            amount = Web3.fromWei(result["total_amount"], config["unit"])
-            row = [config["name"], config["id"], result["_id"], amount]
-            row.extend(Web3.fromWei(result[category], config["unit"]) for category in selected_categories)
-            writer.writerow(row)
-
-def create_category_csv(database: Database, path: str, category: str, days: int, unit: str) -> None:
+def create_category_csv(database: Database, path: str, category: str, days: Decimal, unit: str) -> None:
     """This function will create a csv file with the holders of a category
 
     Args:
@@ -67,12 +51,13 @@ def create_category_csv(database: Database, path: str, category: str, days: int,
         # Create the csv writer
         writer = csv.writer(f)
         # Write header
-        writer.writerow(['address', 'total amount', 'day average'])
+        writer.writerow(["Days", days])
+        writer.writerow(['address', 'total amount', 'day average total amount'])
 
         results = database.category_address_sum(category)
         
         def format_to_csv(value: dict[str, any]) -> list[str | float]:
-            amount = Web3.fromWei(value["amount"], unit)
+            amount = Decimal(Web3.fromWei(value["amount"], unit))
             day_average = 0 if (days == 0) else amount/days
             return [value["_id"], amount, day_average]
 
@@ -99,27 +84,63 @@ def export(config: dict[str, any]) -> None:
         os.mkdir('csv')
     path = os.path.join(path, 'csv')
 
-    # Get date
     w3 = Web3(HTTPProvider(config["blockchain"]["rpc"]))
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    total(database, path, config)
+    # Get only categories that are in config
+    selected_categories = [
+        category for category in AIRDROP_CATEGORIES 
+        if category in config
+    ]
+    
+    total = total_categories(database, path, config["id"], selected_categories)
 
-    for category in AIRDROP_CATEGORIES:
-        if category not in config:
-            continue  # Skip categories that are not in config
-
+    days: dict[str, Decimal] = {}
+    for category in selected_categories:
         start_block = config[category]["start_block"]
         last_block = config[category]["last_block"]
         date = get_block_date(start_block, w3)
         date_last = get_block_date(last_block, w3)
-        total_days = abs((date_last-date).days)
-        print(f"{category.capitalize()} total days: {total_days}")
-        create_category_csv(database, path, category, total_days, config["unit"])
+        day = abs((date_last - date).days)
+        print(f"Category: {category}, days: {day}")
+        days[category] = Decimal(day)
 
-    airdrop_results(path, config, database)
+    results = database.total_airdrop_result(config['id'], selected_categories)
 
+    for category in selected_categories:
+        create_category_csv(database, path, category, days[category], config["unit"])
+    
+    total_with_day_avg = sum(total[category]/days[category] for category in selected_categories)
+    
+    with open(os.path.join(path, "airdrops_results.csv"), 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Airdrop name", config["name"], "Airdrop id", config["id"]])
+        for category in selected_categories:
+            writer.writerow([f"Days {category}", days[category]])
+
+        writer.writerow(["address", *selected_categories, "total amount", "day average total amount", "alocated amount"])
+        total_alocated = Decimal(0)
+        for result in results:
+            row = [result["_id"]]
+            total_avg = Decimal(0)
+            total = Decimal(0)
+            for category in selected_categories:
+                amount = Decimal(Web3.fromWei(result[category], config["unit"]))
+                total += amount
+                
+                day_average = Decimal(0) if (days[category] == 0) else amount/days[category]
+                total_avg += day_average
+                row.append(amount)
+
+            row.append(total)
+            row.append(total_avg)
+            allocated = (total_avg/total_with_day_avg)*AIRDROP_AMOUNT
+            row.append(allocated)
+            total_alocated += allocated
+            writer.writerow(row)
+        print(f"Total allocated: {total_alocated:.18f}")
     database.close()
+
 
 if __name__ == "__main__":
     config_file = os.environ.get("AIRDROP_CONF")

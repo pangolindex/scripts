@@ -1,5 +1,3 @@
-from json import dumps
-from textwrap import indent
 from mongoengine import connect, disconnect
 from pymongo.command_cursor import CommandCursor
 
@@ -44,13 +42,13 @@ class Database():
             }
         }])
 
-    def total_amount_category(self, category: str) -> float:
+    def total_amount_category(self, category: str, airdrop_id: str) -> float:
         """Return Total amount of category
             category (str): Category of transaction
         Returns:
            float: total amount
         """
-        return Transaction.objects(category=category).sum('amount')
+        return Transaction.objects(category=category, airdrop_id=airdrop_id).sum('amount')
 
     def total_airdrop_result(self, airdrop_id: str, categories: str) -> CommandCursor | None:
         """Return Total amount of category

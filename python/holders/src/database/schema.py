@@ -1,5 +1,3 @@
-from random import choices
-from unicodedata import category
 from mongoengine import *
 
 from src.constants.main import AIRDROP_CATEGORIES
