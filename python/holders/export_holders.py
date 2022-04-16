@@ -27,7 +27,8 @@ def total_categories(database: Database, path: str, airdrop_id: str, categories:
         
         total = {}
         for category in categories:
-            total[category] = Decimal(database.total_amount_category(category, airdrop_id))
+            _total = Decimal(database.total_amount_category(category, airdrop_id))
+            total[category] = _total if category.lower() != 'lp' else _total*Decimal(2)
             writer.writerow([category, total[category]])
             
         writer.writerow(["Total", sum(total.values())])
@@ -129,6 +130,8 @@ def export(config: dict[str, any]) -> None:
                 total += amount
                 
                 day_average = Decimal(0) if (days[category] == 0) else amount/days[category]
+                if category.lower() == "lp":
+                    day_average *= Decimal(2)
                 total_avg += day_average
                 row.append(amount)
 
