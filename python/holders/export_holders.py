@@ -68,6 +68,8 @@ def create_category_csv(database: Database, path: str, category: str, days: Deci
             writer.writerows(rows)
 
 def export(config: dict[str, any]) -> None:
+    # Put 18 decimal places in the decimal
+    getcontext().prec = 18
     # Load config
     config_parser = RawConfigParser()
     config_parser.read('config.ini')
