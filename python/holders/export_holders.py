@@ -7,7 +7,7 @@ from datetime import datetime
 from configparser import RawConfigParser
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
-
+import math
 from src.airdrop import AIRDROP_CATEGORIES, get_config_from_file
 from src.database.database import Database
 
@@ -69,7 +69,7 @@ def create_category_csv(database: Database, path: str, category: str, days: Deci
 
 def export(config: dict[str, any]) -> None:
     # Put 18 decimal places in the decimal
-    getcontext().prec = 18
+    # getcontext().prec = 18
     # Load config
     config_parser = RawConfigParser()
     config_parser.read('config.ini')
@@ -121,7 +121,7 @@ def export(config: dict[str, any]) -> None:
         for category in selected_categories:
             writer.writerow([f"Days {category}", days[category]])
 
-        writer.writerow(["address", *selected_categories, "total amount", "day average total amount", "alocated amount"])
+        writer.writerow(["address", *selected_categories, "total amount", "day average total amount", "allocated amount"])
         total_alocated = Decimal(0)
         for result in results:
             row = [result["_id"]]
@@ -139,7 +139,7 @@ def export(config: dict[str, any]) -> None:
 
             row.append(total)
             row.append(total_avg)
-            allocated = (total_avg/total_with_day_avg)*AIRDROP_AMOUNT
+            allocated = math.trunc((total_avg/total_with_day_avg)*AIRDROP_AMOUNT)
             row.append(allocated)
             total_alocated += allocated
             writer.writerow(row)
