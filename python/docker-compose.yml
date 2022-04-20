@@ -12,12 +12,13 @@ services:
     container_name: pangopy-${PROJECT}
     environment:
       MONGODB_PASSWORD: ${MONGO_PWD}
-      CONF_PATH: "/workspace/config"
+      CONF_PATH: "/config"
       AIRDROP_CONF: ${AIRDROP_CONF}
+      CONNECTION_STRING: ${CONNECTION_STRING}
     command: [ "tail", "-f", "./requirements.txt"]
     volumes:
       - ./${PROJECT}:/workspace/
-      - ../config:/workspace/config
+      - ../config:/config
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -25,6 +26,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USR}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PWD}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_URI: ${MONGO_URI}
     volumes:
       - mongodbdata:/data/db/
       - ./outputs:/workspace/outputs

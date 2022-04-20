@@ -1,4 +1,5 @@
-gql
-pymongo
-web3
-dnspython
+InquirerPy == 0.3.3
+mongoengine == 0.24.1
+pymongo == 4.0.2
+prompt_toolkit == 3.0.28
+web3 == 5.28.0

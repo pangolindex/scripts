@@ -1,155 +1,104 @@
-import configparser, json, os
+import importlib
+import os
 
-from web3 import Web3
+from configparser import RawConfigParser
+from queue import Queue
+from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
 
-from src.block import Block
-from src.constants.main import (
-    PNG,
-    LP_PNG_AVAX,
-    STAKING_AVAX,
-    STAKING_OOE,
-    STAKING_APEIN,
-)
-from src.database import Database
-from src.workers import Worker_PNG, Worker_LP, Worker_STAKING
+from src.constants.main import AIRDROP_CATEGORIES
+from src.airdrop import get_config_from_file
+from src.database.database import Database
+from src.ui import create_app, create_category_body, vertical_line
+from src.categories.worker import BaseWoker
 
-if os.environ.get('CONF_PATH') is None:
-    CONF_PATH = "../../config"
-else:
-    CONF_PATH = os.environ.get('CONF_PATH')
 
-print(CONF_PATH)
-PATH_ABS = os.path.dirname(os.path.realpath('__file__'))
-PATH_ABI = os.path.join(PATH_ABS , CONF_PATH)
-
-with open(os.path.join(PATH_ABI, "abi.json")) as file:
-    ABIS = json.load(file)
-
-PNG_ABI = ABIS['PNG']
-LP_PNGAVAX_ABI = ABIS['PAIR']
-STAKING_ABI = ABIS['STAKING_REWARDS']
-
-def main() -> None:
+def get_holders(config: dict[str, any]) -> None:
     """This script get all PNG transfers, Mint/Burn LP PNG/AVAX and Staking (AVAX, OOE, APEIN) and save in mongodb
-
     Args:
-        connection_string (str): string connection for mongodb cloud
+        config (dict[str, any]): json with config of airdrop
     """
 
     # Load config
-    config = configparser.ConfigParser()
+    config_parser = RawConfigParser()
+    config_parser.read('config.ini')
 
-    #loads a specific airdrop config if specified
-    if os.environ.get('AIRDROP_CONF') is not None:
-        airdrop_conf_path = './airdrops/'+ os.environ.get('AIRDROP_CONF') + '.ini'
-        config.read(airdrop_conf_path)
-    else:
-        config.read('config.ini')
+    # MongoDB connection string
+    connection_string = os.environ.get("CONNECTION_STRING")
+    if connection_string is None:
+        connection_string = config_parser["Mongodb"]["connection_string"]
 
-    # Number of thread of each category
-    NO_WORKERS_PNG = int(config["GetHolders"]["no_workers_png"])
-    NO_WORKERS_LP = int(config["GetHolders"]["no_workers_lp"])
-    NO_WORKERS_STAKING = int(config["GetHolders"]["no_workers_staking"])
+    interval_blocks = config_parser.getint("Config", "interval_blocks")
 
-    # Number of range to query
-    RANGE_BLOCKS = int(config["GetHolders"]["range_blocks"])
-
-    start_block = int(config["GetHolders"]["start_block"])
-    last_block = int(config["GetHolders"]["last_block"])
-    staking_start_block = int(config["GetHolders"]["staking_start_block"])
-
-    #MongoDB connection string
-    connection_string = config["Mongodb"]["connection_string"]
-
-    w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
-    # inject the poa compatibility middleware to the innermost layer
-    #https://web3py.readthedocs.io/en/stable/middleware.html#geth-style-proof-of-authority
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-    # It informs which block should be made to query for the thread, it looks like a pointer that is read by all threads
-    png_block = Block(start_block, last_block)
-    lp_block = Block(start_block, last_block)
-    staking_block = Block(staking_start_block, last_block)
-
-    #Database class
+    # Database class
     database = Database(connection_string)
 
-    # Contracts 
-    png_contract = w3.eth.contract(PNG, abi=PNG_ABI)
+    w3 = Web3(HTTPProvider(config["blockchain"]["rpc"]))
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-    lp_pngavax_contract = w3.eth.contract(LP_PNG_AVAX, abi=LP_PNGAVAX_ABI)
+    categories_body = []
+    workers: list[BaseWoker] = []
+    for i, category in enumerate(AIRDROP_CATEGORIES):
+        if category not in config:
+            continue  # Skip categories that are not in config
 
-    staking_cotract_avax = w3.eth.contract(STAKING_AVAX, abi=STAKING_ABI)
-    staking_cotract_ooe = w3.eth.contract(STAKING_OOE, abi=STAKING_ABI)
-    staking_cotract_apein = w3.eth.contract(STAKING_APEIN, abi=STAKING_ABI)
+        start_block = config[category]["start_block"]
+        last_block = config[category]["last_block"]
 
-    #Create Threads to get all transfers of PNG and start
-    workers_png = []
-    for _ in range(NO_WORKERS_PNG):
-        start = png_block.actual_block
-        worker = Worker_PNG(
-            start,
-            RANGE_BLOCKS,
-            png_block,
-            database,
-            png_contract,
-        )
-        png_block.actual_block += RANGE_BLOCKS
-        workers_png.append(worker)
-    for worker in workers_png:
+        body, progressbar, label, textarea = create_category_body(category, last_block)
+        if i == 0:
+            categories_body.append(body)
+        else:
+            categories_body.extend([vertical_line, body])
+
+        module = importlib.import_module(f"src.categories.{category}")
+        num_workers = config_parser.getint("Config", f"threads_{category}")
+
+        q = Queue()
+        for i in range(start_block, last_block, interval_blocks):
+            q.put(i)
+
+        address = config[category]["address"]
+        if isinstance(address, list):
+            contract = [
+                w3.eth.contract(addr, abi=module.CONTRACT_ABI)
+                for addr in address
+            ]
+        else:
+            contract = w3.eth.contract(address, abi=module.CONTRACT_ABI)
+
+        for _ in range(num_workers):
+            worker = module.Worker(
+                category = category,
+                airdrop_id = config["id"],
+                queue = q,
+                interval = interval_blocks,
+                last_block = last_block,
+                contract = contract,
+                database=database,
+                progressbar = progressbar,
+                textarea = textarea,
+                label = label,
+                web3 = w3
+            )
+            workers.append(worker)
+
+    app = create_app(categories_body, workers)
+
+    for worker in workers:
         worker.start()
+        worker.app = app
+        worker.workers = workers
 
-    #Create Threads to get all PNG holders and start
-    workers_lp = []
-    for _ in range(NO_WORKERS_LP):
-        start = lp_block.actual_block
-        worker = Worker_LP(
-            start,
-            RANGE_BLOCKS,
-            lp_block,
-            database,
-            lp_pngavax_contract,
-            w3
-        )
-        lp_block.actual_block += RANGE_BLOCKS
-        workers_lp.append(worker)
-    for worker in workers_lp:
-        worker.start()
-
-    workers_staking = []
-    for _ in range(NO_WORKERS_STAKING):
-        start = staking_block.actual_block
-        worker = Worker_STAKING(
-            start,
-            RANGE_BLOCKS,
-            staking_block,
-            database,
-            staking_cotract_avax,
-            staking_cotract_ooe,
-            staking_cotract_apein,
-        )
-        staking_block.actual_block += RANGE_BLOCKS
-        workers_staking.append(worker)
-    for worker in workers_staking:
-        worker.start()
-
-    # Join workers to wait till they finished
-    for worker in workers_png:
+    app.run(in_thread=True)
+    for worker in workers:
         worker.join()
-    for worker in workers_lp:
-        worker.join() 
-    for worker in workers_staking:
-        worker.join() 
-
-    found_tx_png = sum(worker.count_tx_png_holders for worker in workers_png)
-    print(f"Found {found_tx_png} png holders transactions")
-
-    found_tx_lp = sum(worker.count_tx_png_holders for worker in workers_png)
-    print(f"Found {found_tx_lp} LP PNG/AVAX transactions")
-
-    found_tx_staking = sum(worker.count_tx_png_holders for worker in workers_png)
-    print(f"Found {found_tx_staking} staking transactions")
+    
+    database.close()
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("Done")
 
 if __name__ == "__main__":
-    main()
+    config_file = os.environ.get("AIRDROP_CONF")
+    config = get_config_from_file(config_file)
+    get_holders(config)

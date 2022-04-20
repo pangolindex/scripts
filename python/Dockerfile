@@ -1,4 +1,4 @@
-FROM python:3.9.2
+FROM python:3.10.2
 
 WORKDIR /packages
 COPY pango_helpers /packages/helpers
@@ -16,6 +16,7 @@ ARG PROJECT
 COPY ./$PROJECT/requirements.txt /workspace/requirements.txt
 RUN pip install --upgrade pip
 
+RUN mkdir /config
 RUN pip install -r requirements.txt
 
 
