@@ -126,7 +126,7 @@ def get_pool_info(
     pools_info.sort(key=lambda x: x[variation.order_by], reverse=True)
 
     if variation.only_super_farms:
-        pools_info = list(filter(lambda x: len(x['rewards'] )> 1, pools_info))
+        pools_info = list(filter(lambda x: len(x['rewards']) > 1, pools_info))
     elif variation.only_farms:
         pools_info = list(filter(lambda x: len(x['rewards']) == 1, pools_info))
 
@@ -138,15 +138,17 @@ def main(
     user: dict[str, any]
 ) -> None:
     last_variation = get_last_variation()
+    last_variation = 5
     variation = VARIATIONS[last_variation]
     pools = get_pools() # get all pools from minichef
-    farms = get_aprs(pools) # get the aprs from minicheft pools and sort by apr
+    farms = get_aprs(pools) # get the aprs from minicheft pools
     pools_info = get_pool_info(pools, farms, variation)
     text = f"{variation.text()}\n\n"
     for pool in pools_info:
         token0: Token = pool['token0']
         token1: Token = pool['token1']
-        text += f'${token0.symbol} - ${token1.symbol}\n'
+        text += f'${token0.symbol} 🤝 ${token1.symbol}\n'
+    text += "\n🔗 https://app.pangolin.exchange/#/beta/pool"
     text += "\n#Pangolindex #Avalanche"
 
     tweet_params = {
@@ -156,11 +158,11 @@ def main(
 
     if GENERATE_IMAGE:
         img = create_image(pools_info, variation)
-        media = api.media_upload('image.png', file=img)
-        tweet_params["media_ids"] = [media.media_id_string]
+        #media = api.media_upload('image.png', file=img)
+        #tweet_params["media_ids"] = [media.media_id_string]
 
-    response = client.create_tweet(**tweet_params)
-    tweet_data = response.data
-    print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    set_last_variation(last_variation+1)
+    # response = client.create_tweet(**tweet_params)
+    # tweet_data = response.data
+    # print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    # logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    # set_last_variation(last_variation+1)

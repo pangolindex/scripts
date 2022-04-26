@@ -5,6 +5,7 @@ from src.constants.config import PATH_ABS
 class Variation:
     def __init__(
         self,
+        template: str,
         only_super_farms = False,
         only_farms = False,
         order_by = "APR",
@@ -13,11 +14,13 @@ class Variation:
         """Constructor for Variation class.
 
         Args:
+            template (str): name of image to add in background.
             only_super_farms (bool, optional): Show only super farms. Defaults to False.
             only_farms (bool, optional): Show only farms (only with PNG as reward). Defaults to False.
             order_by (str, optional): Order of farms, volume, apr or tvl. Defaults to "APR".
             number_farms (int, optional): Number of top farms. Defaults to 10.
         """
+        self.template = template
         self.only_super_farms = only_super_farms
         self.only_farms = only_farms
         self.order_by = order_by
@@ -31,28 +34,20 @@ class Variation:
         farm_text = "super farms" if self.only_super_farms else "farms" if self.only_farms else "farms and super farms"
         return f"Top {self.number_farms} {farm_text} on Pangolin by {self.order_by}."
 
-TOP_10_APR = Variation() # Top 10 farms and super farms by apr
-TOP_10_TVL = Variation(order_by="tvl") # Top 10 farms and super farms by tvl
-TOP_10_VOLUME = Variation(order_by="volume") # Top 10 farms and super farms by volume
-TOP_10_SUPER_FARMS = Variation(only_super_farms=True) # Top 10 super farms by apr
-TOP_5_SUPER_FARMS = Variation(only_super_farms=True, number_farms=5) # Top 5 super farms by apr
-TOP_10_SUPER_FARMS_TVL = Variation(only_super_farms=True, order_by="TVL") # Top 10 super farms by tvl
-TOP_10_FARMS = Variation(only_farms=True) # Top 10 farms by apr
-TOP_5_FARMS = Variation(only_farms=True, number_farms=5) # Top 5 farms by apr
-TOP_5_SUPER_FARMS_VOLUME = Variation(only_super_farms=True, order_by="volume", number_farms=5) # Top 5 super farms by volume
-TOP_5_FARMS_VOLUME = Variation(only_farms=True, order_by="volume", number_farms=5) # Top 5 farms by volume
+TOP_5_SUPER_FARMS = Variation("top_5_super.png", only_super_farms = True, number_farms = 5)
+TOP_5_FARMS = Variation("top_5_farms.png", only_farms = True, number_farms = 5)
+TOP_10_SUPER_FARMS_VOLUME = Variation("top_10_super_volume.png", only_super_farms = True, order_by = "volume")
+TOP_10_SUPER_FARMS_TVL = Variation("top_10_super_tvl.png", only_super_farms = True, order_by = "TVL")
+TOP_10_FARMS_VOLUME = Variation("top_10_farms_volume.png", only_farms= True, order_by = "volume")
+TOP_10_FARMS_TVL = Variation("top_10_farms_tvl.png", only_farms= True, order_by = "TVL")
 
 VARIATIONS = [
-    TOP_10_APR,
-    TOP_10_SUPER_FARMS,
-    TOP_10_FARMS,
-    TOP_10_TVL,
     TOP_5_SUPER_FARMS,
     TOP_5_FARMS,
-    TOP_10_VOLUME,
+    TOP_10_SUPER_FARMS_VOLUME,
+    TOP_10_FARMS_VOLUME,
     TOP_10_SUPER_FARMS_TVL,
-    TOP_5_FARMS_VOLUME,
-    TOP_5_SUPER_FARMS_VOLUME,
+    TOP_10_FARMS_TVL
 ]
 
 

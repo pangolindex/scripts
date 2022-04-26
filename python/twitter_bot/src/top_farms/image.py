@@ -1,87 +1,126 @@
 import os
 
 from io import BytesIO
+from venv import create
 from PIL import Image, ImageDraw, ImageFont
 
+from src.constants.config import PATH_ABS
 from src.classes.token import Token
 from src.utils.utils import human_format, get_logo, PATH_FONTS
 from src.top_farms.variations import Variation
 
 
-POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=24)
-POPPINS_14 = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=14)
+POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=28)
+POPPINS_20 = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=20)
 POPPINS_BOLD = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins-Bold.ttf"), size=28)
 
-def create_mask(size: tuple[int, int]) -> Image:
-    mask = Image.new('L', size, 0)
-    draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0) + size, fill=255)
-    return mask
 
-def super_farm_card() -> Image:
-    img = Image.new('RGBA', (100, 40), (0, 0, 0, 0))
+def get_template(variation: Variation) -> Image:
+    return Image.open(os.path.join(f"{PATH_ABS}/src/top_farms/images", variation.template))
+
+
+def create_image_10(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+    img: Image = get_template(variation)
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((0, 0, 100, 40), fill='#FFC800', radius=5)
-    text = "Super Farm"
-    w ,h = draw.textsize(text, POPPINS_14)
-    draw.text(((100-w)/2, (40-h)//2), text, (0, 0, 0), font=POPPINS_14)
-    return img
 
-MASK = create_mask((48,48))
-SUPERFARM = super_farm_card()
+    # draw the first 3 tokens
+    for i, farm in enumerate(farms[:3]):
+        # paste the token logo
+        logo0 = get_logo(farm["token0"], 48)
+        img.paste(logo0, (100, 230 + i * 120), logo0)
+        logo1 = get_logo(farm["token1"], 48)
+        img.paste(logo1, (144, 230 + i * 120), logo1)
 
-def create_card(farm: dict[str, any]) -> Image:
-    card_img = Image.new('RGBA', (1160, 100), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(card_img)
-    draw.rounded_rectangle((0, 0, 1160, 100), fill='#1C1C1C', radius=5)
-    token0: Token = farm["token0"]
-    token1: Token = farm["token1"]
-    msg = f'{token0.symbol} - {token1.symbol}'
-    _, h = draw.textsize(msg, POPPINS_BOLD)
+        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        draw.text(
+            (200, 230 + i * 120),
+            text,
+            font=POPPINS_BOLD,
+            fill=(255, 255, 255, 255)
+        )
+        num = farm[variation.order_by]
+        text2 =  f"{num}%" if variation.order_by == "APR" else human_format(num)
+        draw.text(
+            (500, 230 + i * 120), 
+            text2,
+            font=POPPINS,
+            fill=(255, 255, 255, 255)
+        )
 
-    draw.text(
-        xy=(121, (100-h)//2),
-        text=msg,
-        fill=(255, 255, 255),
-        font=POPPINS_BOLD
-    )
-    logo0 = Image.open(get_logo(token0, 48)).convert("RGBA")
-    logo1 = Image.open(get_logo(token1, 48)).convert("RGBA")
-    card_img.paste(logo0, (10, 26), MASK)
-    card_img.paste(logo1, (53, 26), MASK)
+    # draw the rest of tokens
+    for i, farm in enumerate(farms[3:]):
+        # paste the token logo
+        logo0 = get_logo(farm["token0"], 24)
+        img.paste(logo0, (750, 212 + i * 50), logo0)
+        logo1 = get_logo(farm["token1"], 24)
+        img.paste(logo1, (770, 212 + i * 50), logo1)
 
-    text = f'TVL {human_format(farm["TVL"])}'
-    _, h = draw.textsize(text, POPPINS)
-    draw.text((400, (100-h)//2), text, (255, 255, 255), font=POPPINS)
-    
-    text = f'Total volume {human_format(farm["volume"])}'
-    _, h = draw.textsize(text, POPPINS)
-    draw.text((600, (100-h)//2), text, (255, 255, 255), font=POPPINS)
-
-    text = f'APR {farm["APR"]}%'
-    w, h = draw.textsize(text, POPPINS)
-    draw.text((1160-20-w, (100-h)//2), text, (255, 255, 255), font=POPPINS)
-
-    if len(farm['rewards']) > 1:
-        card_img.paste(SUPERFARM, (900, 30), SUPERFARM)
-
-    return card_img
-
-
-def create_image(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
-    HEIGHT = 100*(variation.number_farms) + 20*(variation.number_farms-1)+20+60
-    img = Image.new('RGBA', (1200, HEIGHT), '#111111')
-    draw = ImageDraw.Draw(img)
-    text = variation.img_text()
-    w, _ = draw.textsize(text, POPPINS)
-    draw.text(((1200-w)/2, 20), text, (255, 255, 255), font=POPPINS)
-    for i in range(variation.number_farms):
-        card = create_card(farms[i])
-        y = 100*i + 20*i + 60
-        img.paste(card, (20, y), card)
+        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        _, y = draw.textsize(text, font=POPPINS_20)
+        draw.text(
+            (800, (200+(y//2)) + i * 50),
+            text,
+            font=POPPINS_20,
+            fill=(255, 255, 255, 255)
+        )
+        num = farm[variation.order_by]
+        text2 =  f"{num}%" if variation.order_by == "APR" else human_format(num)
+        _, y = draw.textsize(text2, font=POPPINS_20)
+        draw.text(
+            (1020, (200+(y//2)) + i * 50),
+            text2,
+            font=POPPINS_20,
+            fill=(255, 255, 255, 255)
+        )
 
     output = BytesIO()
     img.save(output, format="PNG")
     img.show()
     output.seek(0)
     return output
+
+def create_image_5(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+    img = get_template(variation)
+    draw = ImageDraw.Draw(img)
+    
+    space = 80
+    for i, farm in enumerate(farms):
+        # compensating for misalignment of white circles
+        if i > 1 and space == 80:
+            space = 83
+        
+        logo0 = get_logo(farm["token0"], 48)
+        img.paste(logo0, (550, 196 + i * space), logo0)
+        logo1 = get_logo(farm["token1"], 48)
+        img.paste(logo1, (594, 196 + i * space), logo1)
+
+        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        _, y = draw.textsize(text, font=POPPINS_BOLD)
+        draw.text(
+            (655, (220-(y//2)) + i * space),
+            text,
+            font = POPPINS_BOLD,
+            fill = (255, 255, 255, 255)
+        )
+        num = farm[variation.order_by]
+        text2 =  f"{num}%" if variation.order_by == "APR" else human_format(num)
+        _, y = draw.textsize(text2, font=POPPINS_BOLD)
+        draw.text(
+            (920, (220-(y//2)) + i * space),
+            text2,
+            font = POPPINS_BOLD,
+            fill = (255, 255, 255, 255)
+        )
+
+    output = BytesIO()
+    img.save(output, format="PNG")
+    img.show()
+    output.seek(0)
+    return output
+
+
+def create_image(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+    if variation.number_farms == 10:
+        return create_image_10(farms, variation)
+    elif variation.number_farms == 5:
+        return create_image_5(farms, variation)

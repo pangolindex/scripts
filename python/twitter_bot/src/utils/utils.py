@@ -2,14 +2,14 @@ import os
 import requests
 
 from io import BytesIO
+from PIL import Image, ImageDraw, ImageChops
 
 from src.classes.token import Token
 from src.constants.config import PATH_ABS
 from src.constants.tokens import PNG, WAVAX
 
-PATH_DATA = os.path.join(PATH_ABS, "src/data")
-PATH_FONTS = os.path.join(PATH_DATA, "fonts")
-PATH_IMAGE = os.path.join(PATH_DATA, "images")
+PATH_FONTS = os.path.join(PATH_ABS, "src/fonts")
+PATH_IMAGE = os.path.join(PATH_ABS, "src/images")
 
 
 def is_avax(address: str) -> bool:
@@ -27,16 +27,28 @@ def human_format(num: float | int) -> str:
     return f'{num:.2f}{letter}'
 
 
-def get_logo(token: Token, size: int | None) -> BytesIO | str:
+def create_mask(size: tuple[int, int]) -> Image:
+    mask = Image.new('L', size, 0)
+    ImageDraw.Draw(mask).ellipse((0, 0) + size, fill=255)
+    mask = mask.resize(size, Image.ANTIALIAS)
+    return mask
+
+
+def get_logo(token: Token, size: int | None) -> Image:
     if is_avax(token.address):
         name = f"avax_{size}.png" if size else "avax.png"
-        return os.path.join(PATH_IMAGE, name)
+        return Image.open(os.path.join(PATH_IMAGE, name)).convert("RGBA")
 
     response = requests.get(token.logo(size))
 
     if response.status_code == 200:
-        return BytesIO(response.content)
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+        mask = create_mask(img.size)
+        mask = ImageChops.darker(mask, img.split()[-1])
+        # crop the logo
+        img.putalpha(mask)
+        return img.convert("RGBA")
 
     response = requests.get(PNG.logo(size))
 
-    return BytesIO(response.content)
+    return Image.open(BytesIO(response.content)).convert("RGBA")
