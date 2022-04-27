@@ -1,11 +1,9 @@
 import os
 
 from io import BytesIO
-from venv import create
 from PIL import Image, ImageDraw, ImageFont
 
 from src.constants.config import PATH_ABS
-from src.classes.token import Token
 from src.utils.utils import human_format, get_logo, PATH_FONTS
 from src.top_farms.variations import Variation
 
