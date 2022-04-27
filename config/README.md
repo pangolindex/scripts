@@ -2,13 +2,19 @@
 
 Some functionality requires sensitive information like your wallet address or private key. 
 This information should be provided via a `config.js` file following the template provided 
-in the `config.example.js` file:
+in the `config.example.js` file. Copy the example template and rename it to `config.js`
 
-1) Create a new file called `config.js` from the example template
-2) Replace the `ADDRESS` value with your wallet address
-3) Replace `KEY` value with your private key
 
-The following is an example of what your `config.js` file might look like:
+### Overriding or specifying information via text
+
+The recommended `config.js` setup will utilize two environment variables 
+`WALLET_ADDRESS` and `WALLET_KEY` by default, but also supports overriding 
+or specifying this information directly in the `config.js` file like so:
+
+1) Replace `process.env.WALLET_ADDRESS` with your wallet address wrapped in quotes
+2) Replace `process.env.WALLET_KEY` with your private key wrapped in quotes
+
+The following is an example of what an overridden `config.js` file might look like:
 ```js
 module.exports = {
 

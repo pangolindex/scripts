@@ -51,7 +51,7 @@ provide a GUI for related information. Notable functionality includes single sid
 of tokenlist updates.
 
 ### `/python`
-This directory contains all scripts wrote in python.
+This directory contains all scripts written in python.
 
 ### Other
 The vesting bot used by Pangolin also lives here. It ensures that PNG is vested appropriately each day so that PNG 

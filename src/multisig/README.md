@@ -11,10 +11,6 @@ the script.
 Execute a proposed transaction that has reached the confirmation threshold. This can only be done by members of the 
 multisig. All configuration is done internal to the script.
 
-### `resetDuration.js`
-This is a relic of a former task which will likely not be replicated. The old code lives here in case it needs to be 
-called upon and modified.
-
 ### `tokenApprove.js`
 Approves tokens for use from a multisig. This can only be done by members of the multisig. All configuration is done 
 internal to the script. If the approval amount is not modified, a default approval of infinite will be performed.
