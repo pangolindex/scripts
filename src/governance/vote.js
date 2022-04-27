@@ -35,7 +35,8 @@ const vote = true;
 
     console.log(`Encoding bytecode ...`);
     const bytecode = tx.encodeABI();
-    const fileOutput = `./${path.basename(__filename, '.js')}-bytecode.txt`;
+    const fileName = path.basename(__filename, '.js');
+    const fileOutput = path.join(__dirname, `${fileName}-bytecode.txt`);
     fs.writeFileSync(fileOutput, bytecode);
     console.log(`Encoded bytecode to ${fileOutput}`);
     console.log();
