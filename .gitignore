@@ -31,3 +31,4 @@ __pycache__
 *-bytecode.txt
 
 src/**/*sandbox*.js
+src/_sandbox/
