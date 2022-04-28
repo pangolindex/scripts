@@ -158,11 +158,11 @@ def main(
 
     if GENERATE_IMAGE:
         img = create_image(pools_info, variation)
-        #media = api.media_upload('image.png', file=img)
-        #tweet_params["media_ids"] = [media.media_id_string]
+        media = api.media_upload('image.png', file=img)
+        tweet_params["media_ids"] = [media.media_id_string]
 
-    # response = client.create_tweet(**tweet_params)
-    # tweet_data = response.data
-    # print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    # logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    # set_last_variation(last_variation+1)
+    response = client.create_tweet(**tweet_params)
+    tweet_data = response.data
+    print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    set_last_variation(last_variation+1)

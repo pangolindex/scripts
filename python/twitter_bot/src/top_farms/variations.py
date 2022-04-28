@@ -52,7 +52,7 @@ VARIATIONS = [
 
 
 def get_last_variation() -> int:
-    with open(path.join(PATH_ABS, "src/top_farms/last_variation.txt"), "r") as f:
+    with open(path.join(PATH_ABS, "src/top_farms/last_variation"), "r") as f:
         variation = int(f.read())
         if variation > len(VARIATIONS) - 1:
             variation = 0
@@ -60,5 +60,5 @@ def get_last_variation() -> int:
 
 
 def set_last_variation(variation: int):
-    with open(path.join(PATH_ABS, "src/top_farms/last_variation.txt"), "w") as f:
+    with open(path.join(PATH_ABS, "src/top_farms/last_variation"), "w") as f:
         f.write(str(variation))
