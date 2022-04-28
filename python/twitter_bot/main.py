@@ -7,6 +7,7 @@ from src.utils.client import create_client
 from src.utils.background_worker import BackgroundWorker
 
 from src.top_farms.main import PERIOD as top_farms_period, main as top_farms
+from src.top_gamefi.main import PERIOD as top_gamefi_period, main as top_gamefi
 
 if not os.path.exists("config_bot.ini"):
     print("Please copy the config_bot_example.ini to config_bot.ini and add your Twitter api keys!")
@@ -44,6 +45,8 @@ def main() -> None:
     try:
         top_farms_task = BackgroundWorker(top_farms_period, top_farms, client, api, user) 
         tasks.append(top_farms_task)
+        top_gamefi_task = BackgroundWorker(top_gamefi_period, top_gamefi, client, api, user) 
+        tasks.append(top_gamefi_task)
     except KeyboardInterrupt:
         print("Canceling all tasks")
         stop_tasks(tasks)

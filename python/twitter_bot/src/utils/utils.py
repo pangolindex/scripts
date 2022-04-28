@@ -27,14 +27,35 @@ def human_format(num: float | int) -> str:
     return f'{num:.2f}{letter}'
 
 
-def create_mask(size: tuple[int, int]) -> Image:
+def create_mask(size: tuple[int, int]) -> Image.Image:
     mask = Image.new('L', size, 0)
     ImageDraw.Draw(mask).ellipse((0, 0) + size, fill=255)
     mask = mask.resize(size, Image.ANTIALIAS)
     return mask
 
+def crop_logo(img: Image) -> Image.Image:
+    """Crop the logo in circle
 
-def get_logo(token: Token, size: int | None) -> Image:
+    Args:
+        img (Image): The logo image
+
+    Returns:
+        Image: The cropped logo image
+    """
+    mask = create_mask(img.size)
+    mask = ImageChops.darker(mask, img.split()[-1])
+    img.putalpha(mask)
+    return img
+
+
+def get_logo(token: Token, size: int | None = None) -> Image.Image:
+    if token._logo:
+        response = requests.get(token.logo())
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+        img = img.resize((size, size), Image.ANTIALIAS)
+        img = crop_logo(img)
+        return img
+        
     if is_avax(token.address):
         name = f"avax_{size}.png" if size else "avax.png"
         return Image.open(os.path.join(PATH_IMAGE, name)).convert("RGBA")
@@ -43,10 +64,7 @@ def get_logo(token: Token, size: int | None) -> Image:
 
     if response.status_code == 200:
         img = Image.open(BytesIO(response.content)).convert("RGBA")
-        mask = create_mask(img.size)
-        mask = ImageChops.darker(mask, img.split()[-1])
-        # crop the logo
-        img.putalpha(mask)
+        img = crop_logo(img)
         return img.convert("RGBA")
 
     response = requests.get(PNG.logo(size))
