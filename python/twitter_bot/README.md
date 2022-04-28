@@ -6,6 +6,7 @@ You need to get api keys in [Twitter Developer Portal](https://developer.twitter
 
 This bot has the following functions:
 - **Tweet the top farms** of pangolin farms, every 1 day, with variations: top 5 super farms by apr, top 10 farms and super farms by tvl, etc
+- **Tweet the top gamefi tokens** of pangolin by volume (24 hours), every 3 day, with variations: top 10 and top 5
 
 ## To add a new function
 You can create a folder inside [src](src/) folder and add your logic inside it, then you will need to import your logic in [main.py](main.py) and set the time that this code will be executed again.
