@@ -13,6 +13,7 @@ from src.top_farms.variations import VARIATIONS, Variation, get_last_variation, 
 from src.top_farms.get_apr_worker import Worker
 from src.utils.graph import Graph
 from src.utils.utils import is_avax
+from src.top_farms.type import APRData, FarmData
 
 logger = logging.getLogger()
 
@@ -31,7 +32,7 @@ MINICHEF = w3.eth.contract(ADRESSES["PANGOLIN_MINICHEF_V2_ADDRESS"], abi=ABIS["M
 def get_pools() -> list[str]:
     return MINICHEF.functions.lpTokens().call()
 
-def get_aprs(pools: list[str]) -> list[dict[str, any]]:    
+def get_aprs(pools: list[str]) -> list[APRData]:    
     queue = Queue(len(pools))
     for i in range(len(pools)):
         queue.put(i)
@@ -54,9 +55,9 @@ def get_aprs(pools: list[str]) -> list[dict[str, any]]:
 
 def get_pool_info(
     pools: list[str], 
-    farms: list[dict[any]], 
+    farms: list[APRData], 
     variation: Variation
-) -> list[dict[str, any]]:
+) -> list[FarmData]:
     graph = Graph("https://api.thegraph.com/subgraphs/name/pangolindex/exchange")
 
     template = '''
@@ -84,7 +85,7 @@ def get_pool_info(
 
     results = graph.query(query_str)
 
-    pools_info = []
+    pools_info: list[FarmData] = []
     for farm in farms:
         pid = farm['pid']
         address = pools[pid]
@@ -94,7 +95,7 @@ def get_pool_info(
         if rewarder != "0x0000000000000000000000000000000000000000":
             rewarder_contract = w3.eth.contract(rewarder, abi=ABIS["REWARDER_VIA_MULTIPLIER"])
             reward_tokens = rewarder_contract.functions.getRewardTokens().call()
-            reward_tokens = map(lambda x: Token(address=x), reward_tokens)
+            reward_tokens = list(map(lambda x: Token(address=x), reward_tokens))
             rewards.extend(reward_tokens)
 
         token0 = Token(
@@ -111,7 +112,7 @@ def get_pool_info(
         if is_avax(token0.address):
             token1, token0 = token0, token1
 
-        pool_info = {
+        pool_info: FarmData = {
             'pid': pid,
             'APR': farm['apr']['combinedApr'],
             'token0': token0,
@@ -138,7 +139,6 @@ def main(
     user: dict[str, any]
 ) -> None:
     last_variation = get_last_variation()
-    last_variation = 5
     variation = VARIATIONS[last_variation]
     pools = get_pools() # get all pools from minichef
     farms = get_aprs(pools) # get the aprs from minicheft pools

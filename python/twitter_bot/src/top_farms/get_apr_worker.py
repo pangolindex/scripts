@@ -2,13 +2,14 @@ import requests
 from queue import Queue
 from threading import Thread
 
+from src.top_farms.type import APRData
 class Worker(Thread):
     def __init__(self, queue: Queue):
         Thread.__init__(self)
 
         self.queue = queue
 
-        self.results = None
+        self.results: list[APRData] | None = None
 
     def run(self):
         """
@@ -28,8 +29,7 @@ class Worker(Thread):
                         'apr': result 
                     }]
                 else:
-                    self.results.append(
-                        {
+                    self.results.append({
                         'pid': pid,
                         'apr': result 
                     })

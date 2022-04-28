@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 from src.constants.config import PATH_ABS
 from src.utils.utils import human_format, get_logo, PATH_FONTS
 from src.top_farms.variations import Variation
+from src.top_farms.type import FarmData
 
 
 POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=28)
@@ -17,7 +18,7 @@ def get_template(variation: Variation) -> Image:
     return Image.open(os.path.join(f"{PATH_ABS}/src/top_farms/images", variation.template))
 
 
-def create_image_10(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+def create_image_10(farms: list[FarmData], variation: Variation) -> BytesIO:
     img: Image = get_template(variation)
     draw = ImageDraw.Draw(img)
 
@@ -73,11 +74,10 @@ def create_image_10(farms: list[dict[str, any]], variation: Variation) -> BytesI
 
     output = BytesIO()
     img.save(output, format="PNG")
-    img.show()
     output.seek(0)
     return output
 
-def create_image_5(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+def create_image_5(farms: list[FarmData], variation: Variation) -> BytesIO:
     img = get_template(variation)
     draw = ImageDraw.Draw(img)
     
@@ -112,12 +112,11 @@ def create_image_5(farms: list[dict[str, any]], variation: Variation) -> BytesIO
 
     output = BytesIO()
     img.save(output, format="PNG")
-    img.show()
     output.seek(0)
     return output
 
 
-def create_image(farms: list[dict[str, any]], variation: Variation) -> BytesIO:
+def create_image(farms: list[FarmData], variation: Variation) -> BytesIO:
     if variation.number_farms == 10:
         return create_image_10(farms, variation)
     elif variation.number_farms == 5:
