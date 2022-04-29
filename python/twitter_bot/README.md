@@ -5,8 +5,9 @@ This is the bot of [Pangolin Aprs](https://twitter.com/PangolinAPRs) account.
 You need to get api keys in [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard) and if you want to upload images, you will need to request [elevated access](https://developer.twitter.com/en/portal/products/elevated).
 
 This bot has the following functions:
-- **Tweet the top farms** of pangolin farms, every 1 day, with variations: top 5 super farms by apr, top 10 farms and super farms by tvl, etc
-- **Tweet the top gamefi tokens** of pangolin by volume (24 hours), every 3 day, with variations: top 10 and top 5
+- **Tweet the top farms** on pangolin, every 1 day, with variations: top 5 super farms by apr, top 10 farms and super farms by tvl, etc.
+- **Tweet the top gamefi tokens** on pangolin by trade volume (24 hours), every 3 day, with variations: top 10 and top 5.
+- **Tweet the top tokens** on pangolin by trade volume (24 hours), every 3 day.
 
 ## To add a new function
 You can create a folder inside [src](src/) folder and add your logic inside it, then you will need to import your logic in [main.py](main.py) and set the time that this code will be executed again.

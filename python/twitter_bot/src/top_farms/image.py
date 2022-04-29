@@ -14,12 +14,12 @@ POPPINS_20 = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=20
 POPPINS_BOLD = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins-Bold.ttf"), size=28)
 
 
-def get_template(variation: Variation) -> Image:
+def get_template(variation: Variation) -> Image.Image:
     return Image.open(os.path.join(f"{PATH_ABS}/src/top_farms/images", variation.template))
 
 
 def create_image_10(farms: list[FarmData], variation: Variation) -> BytesIO:
-    img: Image = get_template(variation)
+    img = get_template(variation)
     draw = ImageDraw.Draw(img)
 
     # draw the first 3 tokens
