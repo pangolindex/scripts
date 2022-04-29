@@ -1,12 +1,16 @@
 import os
 import requests
 
+from datetime import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageChops
 
 from src.classes.token import Token
 from src.constants.config import PATH_ABS
 from src.constants.tokens import PNG, WAVAX
+from src.classes.types import TokenData
+from src.utils.block import get_block_by_timestamp
+from src.utils.graph import Graph
 
 PATH_FONTS = os.path.join(PATH_ABS, "src/fonts")
 PATH_IMAGE = os.path.join(PATH_ABS, "src/images")
@@ -70,3 +74,49 @@ def get_logo(token: Token, size: int | None = None) -> Image.Image:
     response = requests.get(PNG.logo(size))
 
     return Image.open(BytesIO(response.content)).convert("RGBA")
+
+def get_24h_volume(tokens: list[Token]) -> list[TokenData]:
+    # get timestamp from 1 day ago
+    timestamp_one_day_back = int(datetime.now().timestamp())-86400
+
+    block = get_block_by_timestamp(timestamp_one_day_back)
+    template = '''
+        last_token_{0}: tokens(
+            where: {{id: "{0}"}},
+        ){{
+            tradeVolumeUSD
+        }}
+        token_{0}: tokens(
+            where: {{id: "{0}"}},
+            block: {{number: {1}}}
+        ){{
+            tradeVolumeUSD
+        }}
+    '''
+
+    query = "{"
+    for token in tokens:
+        query += template.format(token.address.lower(), block)
+    query += "}"
+
+    graph = Graph(
+        "https://api.thegraph.com/subgraphs/name/pangolindex/exchange"
+    )
+
+    result = graph.query(query)
+
+    tokensData: list[TokenData] = []
+    for token in tokens:
+        total_volume = float(
+            result[f"last_token_{token.address.lower()}"][0]["tradeVolumeUSD"])
+        one_day_back_volume = float(
+            result[f"token_{token.address.lower()}"][0]["tradeVolumeUSD"])
+        volume = total_volume - one_day_back_volume
+        tokensData.append({
+            "token": token,
+            "volumeUSD": volume
+        })
+
+    tokensData.sort(key=lambda x: x["volumeUSD"], reverse=True)
+
+    return tokensData

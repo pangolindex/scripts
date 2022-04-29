@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from src.constants.config import PATH_ABS
 from src.utils.utils import human_format, get_logo, PATH_FONTS
-from src.top_gamefi.type import TokenData
+from src.classes.types import TokenData
 
 
 POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=28)
@@ -54,6 +54,7 @@ def create_image_5(tokensData: list[TokenData]) -> BytesIO:
     output = BytesIO()
     background.save(output, format="PNG")
     output.seek(0)
+    background.show()
     return output
 
 
@@ -126,6 +127,7 @@ def create_image_10(tokensData: list[TokenData]) -> BytesIO:
     output = BytesIO()
     background.save(output, format="PNG")
     output.seek(0)
+    background.show()
     return output
 
 def create_image(tokensData: list[TokenData]) -> BytesIO:
