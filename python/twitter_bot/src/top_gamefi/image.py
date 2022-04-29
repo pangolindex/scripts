@@ -54,7 +54,6 @@ def create_image_5(tokensData: list[TokenData]) -> BytesIO:
     output = BytesIO()
     background.save(output, format="PNG")
     output.seek(0)
-    background.show()
     return output
 
 
@@ -127,7 +126,6 @@ def create_image_10(tokensData: list[TokenData]) -> BytesIO:
     output = BytesIO()
     background.save(output, format="PNG")
     output.seek(0)
-    background.show()
     return output
 
 def create_image(tokensData: list[TokenData]) -> BytesIO:
