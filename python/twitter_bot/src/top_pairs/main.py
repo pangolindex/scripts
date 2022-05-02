@@ -13,8 +13,6 @@ logger = logging.getLogger()
 
 GENERATE_IMAGE = True
 
-PERIOD = 6*24*60*60  # 6 days
-
 def get_pairs() -> list[Pair]:
     # get timestamp from 1 day ago
     timestamp_one_day_back = int(datetime.now().timestamp())-86400

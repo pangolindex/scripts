@@ -20,8 +20,6 @@ logger = logging.getLogger()
 # Number of workers to work concurrent to get apr
 WORKERS = 40
 # Time period to tweet, in seconds
-# 1 day
-PERIOD = 1*24*60*60
 # Generate image to add in tweet
 GENERATE_IMAGE = True
 
@@ -134,10 +132,9 @@ def get_pool_info(
 def main(
     client: Client,
     api: API, 
-    user: dict[str, any]
+    user: dict[str, any],
+    variation: Variation
 ) -> None:
-    last_variation = get_last_variation()
-    variation = VARIATIONS[last_variation]
     pools = get_pools() # get all pools from minichef
     farms = get_aprs(pools) # get the aprs from minicheft pools
     pools_info = get_pool_info(pools, farms, variation)

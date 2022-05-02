@@ -1,15 +1,26 @@
-import logging, os, sys
+import logging
+import os
+import time
+import schedule as sch
+import sys
 
 from configparser import RawConfigParser
 from traceback import format_exc
 
 from src.utils.client import create_client
-from src.utils.background_worker import BackgroundWorker
 
-from src.top_farms.main import PERIOD as top_farms_period, main as top_farms
-from src.top_gamefi.main import PERIOD as top_gamefi_period, main as top_gamefi
-from src.top_tokens.main import PERIOD as top_tokens_period, main as top_tokens
-from src.top_pairs.main import PERIOD as top_pairs_period, main as top_pairs
+from src.top_farms.main import main as top_farms
+from src.top_farms.variations import (
+    TOP_5_SUPER_FARMS,
+    TOP_5_FARMS,
+    TOP_10_FARMS_TVL,
+    # TOP_10_FARMS_VOLUME,
+    # TOP_10_SUPER_FARMS_TVL,
+    TOP_10_SUPER_FARMS_VOLUME,
+)
+from src.top_gamefi.main import main as top_gamefi
+from src.top_tokens.main import main as top_tokens
+from src.top_pairs.main import main as top_pairs
 
 if not os.path.exists("config_bot.ini"):
     print("Please copy the config_bot_example.ini to config_bot.ini and add your Twitter api keys!")
@@ -35,31 +46,34 @@ handler.setLevel(log_level)
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler) 
 
-def stop_tasks(tasks: list[BackgroundWorker]) -> None:
-    for task in tasks:
-        task.stop()
-
 def main() -> None:
     client, api, user, = create_client(config)
-    
+
     print(f"Twitter bot connected with @{user['username']}")
-    tasks = []
-    try:
-        top_farms_task = BackgroundWorker(top_farms_period, top_farms, client, api, user) 
-        tasks.append(top_farms_task)
-        top_gamefi_task = BackgroundWorker(top_gamefi_period, top_gamefi, client, api, user) 
-        tasks.append(top_gamefi_task)
-        top_tokens_task = BackgroundWorker(top_tokens_period, top_tokens, client, api, user)
-        tasks.append(top_tokens_task)
-        top_pairs_task = BackgroundWorker(top_pairs_period, top_pairs, client, api, user)
-        tasks.append(top_pairs_task)
-    except KeyboardInterrupt:
-        print("Canceling all tasks")
-        stop_tasks(tasks)
-        print("Exiting...")
-    except Exception as e:
-        logger.error(str(e))
-        logger.error(format_exc())
+
+    schedule = sch.Scheduler()
+
+    schedule.every().monday.do(top_farms, client, api, user, TOP_5_SUPER_FARMS) # monday: top 5 super farms by apr
+    schedule.every().tuesday.do(top_tokens, client, api, user) # tuesday: top 10 tokens by volume 24h
+    schedule.every().wednesday.do(top_pairs, client, api, user) # wednesday: top 10 pairs by volume 24h
+    schedule.every().thursday.do(TOP_5_FARMS) # thursday: top 5 farms by apr
+    schedule.every().friday.do(top_farms, client, api, user, TOP_10_FARMS_TVL) # friday: top 10 farms by tvl
+    schedule.every().saturday.do(top_gamefi, client, api, user) # saturday: top 5 / 10 gamefi by volume 24h
+    schedule.every().sunday.do(top_farms, client, api, user, TOP_10_SUPER_FARMS_VOLUME) # sunday: top 10 super farms by volume
+
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except KeyboardInterrupt:
+            print("Canceling all tasks")
+            schedule.clear()
+            print("Exiting...")
+            break
+        except Exception as e:
+            logger.error(str(e))
+            logger.error(format_exc())
+            break
 
 if __name__ == "__main__":
     main()

@@ -40,25 +40,3 @@ TOP_10_SUPER_FARMS_VOLUME = Variation("top_10_super_volume.png", only_super_farm
 TOP_10_SUPER_FARMS_TVL = Variation("top_10_super_tvl.png", only_super_farms = True, order_by = "TVL")
 TOP_10_FARMS_VOLUME = Variation("top_10_farms_volume.png", only_farms= True, order_by = "volumeUSD")
 TOP_10_FARMS_TVL = Variation("top_10_farms_tvl.png", only_farms= True, order_by = "TVL")
-
-VARIATIONS = [
-    TOP_5_SUPER_FARMS,
-    TOP_5_FARMS,
-    TOP_10_SUPER_FARMS_VOLUME,
-    TOP_10_FARMS_VOLUME,
-    TOP_10_SUPER_FARMS_TVL,
-    TOP_10_FARMS_TVL
-]
-
-
-def get_last_variation() -> int:
-    with open(path.join(PATH_ABS, "src/top_farms/last_variation"), "r") as f:
-        variation = int(f.read())
-        if variation > len(VARIATIONS) - 1:
-            variation = 0
-        return variation 
-
-
-def set_last_variation(variation: int):
-    with open(path.join(PATH_ABS, "src/top_farms/last_variation"), "w") as f:
-        f.write(str(variation))
