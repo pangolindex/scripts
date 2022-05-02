@@ -6,7 +6,7 @@ from tweepy import API, Client
 from src.classes.token import Token
 from src.top_tokens.image import create_image
 from src.utils.graph import Graph
-from src.utils.utils import get_24h_volume, human_format
+from src.utils.utils import get_tokens_24h_volume, human_format
 
 logger = logging.getLogger()
 
@@ -44,7 +44,7 @@ def get_tokens() -> list[Token]:
 
 def main(client: Client, api: API, user: dict[str, any]) -> None:
     tokens = get_tokens()
-    top_tokens = get_24h_volume(tokens)
+    top_tokens = get_tokens_24h_volume(tokens)
     top_tokens = top_tokens[:10]
 
     text = f"Top {len(top_tokens)} tokens on @pangolindex by volume (24 hours)."
@@ -70,5 +70,5 @@ def main(client: Client, api: API, user: dict[str, any]) -> None:
 
     response = client.create_tweet(**tweet_params)
     tweet_data = response.data
-    print(f"New top {len(top_tokens)} gamefi tokens: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    logger.info(f"New top {len(top_tokens)} agamefi tokens: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    print(f"New top {len(top_tokens)} tokens: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
+    logger.info(f"New top {len(top_tokens)} tokens: https://twitter.com/{user['username']}/status/{tweet_data['id']}")

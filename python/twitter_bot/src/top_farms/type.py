@@ -1,16 +1,14 @@
 from typing import TypedDict
 
 from src.classes.token import Token
+from src.classes.types import PairData
 
 class APRData(TypedDict):
     pid: int
     apr: dict[str, int]
 
-class FarmData(TypedDict):
+class FarmData(PairData):
     pid: int
     APR: int
-    token0: Token
-    token1: Token
     TVL: float
-    volume: float
     rewards: list[Token]

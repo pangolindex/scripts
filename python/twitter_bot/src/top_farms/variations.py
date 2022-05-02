@@ -36,9 +36,9 @@ class Variation:
 
 TOP_5_SUPER_FARMS = Variation("top_5_super.png", only_super_farms = True, number_farms = 5)
 TOP_5_FARMS = Variation("top_5_farms.png", only_farms = True, number_farms = 5)
-TOP_10_SUPER_FARMS_VOLUME = Variation("top_10_super_volume.png", only_super_farms = True, order_by = "volume")
+TOP_10_SUPER_FARMS_VOLUME = Variation("top_10_super_volume.png", only_super_farms = True, order_by = "volumeUSD")
 TOP_10_SUPER_FARMS_TVL = Variation("top_10_super_tvl.png", only_super_farms = True, order_by = "TVL")
-TOP_10_FARMS_VOLUME = Variation("top_10_farms_volume.png", only_farms= True, order_by = "volume")
+TOP_10_FARMS_VOLUME = Variation("top_10_farms_volume.png", only_farms= True, order_by = "volumeUSD")
 TOP_10_FARMS_TVL = Variation("top_10_farms_tvl.png", only_farms= True, order_by = "TVL")
 
 VARIATIONS = [

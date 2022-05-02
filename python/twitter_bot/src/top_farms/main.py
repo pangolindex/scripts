@@ -5,6 +5,7 @@ from tweepy import API, Client
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
+from src.classes.pair import Pair
 from src.classes.token import Token
 from src.constants.config import ABIS, ADRESSES
 from src.constants.tokens import PNG
@@ -12,7 +13,6 @@ from src.top_farms.image import create_image
 from src.top_farms.variations import VARIATIONS, Variation, get_last_variation, set_last_variation
 from src.top_farms.get_apr_worker import Worker
 from src.utils.graph import Graph
-from src.utils.utils import is_avax
 from src.top_farms.type import APRData, FarmData
 
 logger = logging.getLogger()
@@ -100,25 +100,23 @@ def get_pool_info(
 
         token0 = Token(
             name = result["token0"]["name"],
-            symbol = "AVAX" if is_avax(result["token0"]["id"]) else result["token0"]["symbol"], 
+            symbol = result["token0"]["symbol"], 
             address = result["token0"]["id"],
         )
         token1 = Token(
             name = result["token1"]["name"],
-            symbol = "AVAX" if is_avax(result["token1"]["id"]) else result["token1"]["symbol"],
+            symbol = result["token1"]["symbol"],
             address = result["token1"]["id"],
         )
 
-        if is_avax(token0.address):
-            token1, token0 = token0, token1
+        pair = Pair(address, token0, token1)
 
         pool_info: FarmData = {
+            'pair': pair,
             'pid': pid,
             'APR': farm['apr']['combinedApr'],
-            'token0': token0,
-            'token1': token1,
             "TVL": float(result["reserveUSD"]),
-            "volume": float(result["volumeUSD"]),
+            "volumeUSD": float(result["volumeUSD"]),
             'rewards': rewards,
         }
 
@@ -145,9 +143,7 @@ def main(
     pools_info = get_pool_info(pools, farms, variation)
     text = f"{variation.text()}\n\n"
     for pool in pools_info:
-        token0: Token = pool['token0']
-        token1: Token = pool['token1']
-        text += f'${token0.symbol} 🤝 ${token1.symbol}\n'
+        text += f'{pool["pair"].name_for_tweet}\n'
     text += "\n🔗 https://app.pangolin.exchange/#/beta/pool"
     text += "\n#Pangolindex #Avalanche"
 

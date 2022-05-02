@@ -24,23 +24,27 @@ def create_image_10(farms: list[FarmData], variation: Variation) -> BytesIO:
 
     # draw the first 3 tokens
     for i, farm in enumerate(farms[:3]):
+        pair = farm["pair"]
         # paste the token logo
-        logo0 = get_logo(farm["token0"], 48)
-        img.paste(logo0, (100, 230 + i * 120), logo0)
-        logo1 = get_logo(farm["token1"], 48)
-        img.paste(logo1, (144, 230 + i * 120), logo1)
+        logo0 = get_logo(pair.token0, 48)
+        # 250 - (48/2)= 226
+        img.paste(logo0, (105, 226 + i * 120), logo0)
+        logo1 = get_logo(pair.token1, 48)
+        img.paste(logo1, (149, 226 + i * 120), logo1)
 
-        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        text = f"{pair.name}"
+        _, y = draw.textsize(text, font=POPPINS_BOLD)
         draw.text(
-            (200, 230 + i * 120),
+            (200, (250 - (y//2)) + i * 120),
             text,
             font=POPPINS_BOLD,
             fill=(255, 255, 255, 255)
         )
         num = farm[variation.order_by]
         text2 =  f"{num}%" if variation.order_by == "APR" else human_format(num)
+        _, y = draw.textsize(text2, font=POPPINS)
         draw.text(
-            (500, 230 + i * 120), 
+            (500, (250 - (y//2)) + (i * 120)), 
             text2,
             font=POPPINS,
             fill=(255, 255, 255, 255)
@@ -48,16 +52,17 @@ def create_image_10(farms: list[FarmData], variation: Variation) -> BytesIO:
 
     # draw the rest of tokens
     for i, farm in enumerate(farms[3:]):
+        pair = farm["pair"]
         # paste the token logo
-        logo0 = get_logo(farm["token0"], 24)
+        logo0 = get_logo(pair.token0, 24)
         img.paste(logo0, (750, 212 + i * 50), logo0)
-        logo1 = get_logo(farm["token1"], 24)
+        logo1 = get_logo(pair.token1, 24)
         img.paste(logo1, (770, 212 + i * 50), logo1)
 
-        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        text = f"{pair.name}"
         _, y = draw.textsize(text, font=POPPINS_20)
         draw.text(
-            (800, (200+(y//2)) + i * 50),
+            (780, (200+(y//2)) + i * 50),
             text,
             font=POPPINS_20,
             fill=(255, 255, 255, 255)
@@ -86,13 +91,14 @@ def create_image_5(farms: list[FarmData], variation: Variation) -> BytesIO:
         # compensating for misalignment of white circles
         if i > 1 and space == 80:
             space = 83
-        
-        logo0 = get_logo(farm["token0"], 48)
+
+        pair = farm["pair"]
+        logo0 = get_logo(pair.token0, 48)
         img.paste(logo0, (550, 196 + i * space), logo0)
-        logo1 = get_logo(farm["token1"], 48)
+        logo1 = get_logo(pair.token1, 48)
         img.paste(logo1, (594, 196 + i * space), logo1)
 
-        text = f"{farm['token0'].symbol} - {farm['token1'].symbol}"
+        text = f"{pair.name}"
         _, y = draw.textsize(text, font=POPPINS_BOLD)
         draw.text(
             (655, (220-(y//2)) + i * space),
