@@ -12,3 +12,15 @@ class TokenData(TypedDict):
 class PairData(TypedDict):
     pair: Pair
     volumeUSD: float
+
+
+class APRData(TypedDict):
+    pid: int
+    apr: dict[str, int]
+
+
+class FarmData(PairData):
+    pid: int
+    APR: int
+    TVL: float
+    rewards: list[Token]

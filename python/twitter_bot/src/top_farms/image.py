@@ -3,10 +3,10 @@ import os
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
+from src.classes.types import FarmData
 from src.constants.config import PATH_ABS
 from src.utils.utils import human_format, get_logo, PATH_FONTS
 from src.top_farms.variations import Variation
-from src.top_farms.type import FarmData
 
 
 POPPINS = ImageFont.truetype(os.path.join(PATH_FONTS, "Poppins.ttf"), size=28)

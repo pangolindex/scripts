@@ -2,18 +2,17 @@ import logging
 
 from queue import Queue
 from tweepy import API, Client
-from web3 import Web3
-from web3.middleware import geth_poa_middleware
 
 from src.classes.pair import Pair
 from src.classes.token import Token
-from src.constants.config import ABIS, ADRESSES
+from src.classes.types import APRData, FarmData
+from src.constants.config import ABIS
 from src.constants.tokens import PNG
 from src.top_farms.image import create_image
-from src.top_farms.variations import VARIATIONS, Variation, get_last_variation, set_last_variation
+from src.top_farms.variations import Variation
 from src.top_farms.get_apr_worker import Worker
 from src.utils.graph import Graph
-from src.top_farms.type import APRData, FarmData
+from src.utils.utils import get_pools
 
 logger = logging.getLogger()
 
@@ -22,13 +21,6 @@ WORKERS = 40
 # Time period to tweet, in seconds
 # Generate image to add in tweet
 GENERATE_IMAGE = True
-
-w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
-w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-MINICHEF = w3.eth.contract(ADRESSES["PANGOLIN_MINICHEF_V2_ADDRESS"], abi=ABIS["MINICHEF_V2"])
-
-def get_pools() -> list[str]:
-    return MINICHEF.functions.lpTokens().call()
 
 def get_aprs(pools: list[str]) -> list[APRData]:    
     queue = Queue(len(pools))
@@ -158,4 +150,3 @@ def main(
     tweet_data = response.data
     print(f"New top {variation.number_farms} farms tweet: \nhttps://twitter.com/{user['username']}/status/{tweet_data['id']}")
     logger.info(f"New top {variation.number_farms} farms tweet: https://twitter.com/{user['username']}/status/{tweet_data['id']}")
-    set_last_variation(last_variation+1)

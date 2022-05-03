@@ -2,7 +2,7 @@ import requests
 from queue import Queue
 from threading import Thread
 
-from src.top_farms.type import APRData
+from src.classes.types import APRData
 class Worker(Thread):
     def __init__(self, queue: Queue):
         Thread.__init__(self)

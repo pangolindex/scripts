@@ -1,14 +1,15 @@
-from lib2to3.pgen2 import token
 import os
 import requests
 
 from datetime import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageChops
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 from src.classes.token import Token
 from src.classes.pair import Pair
-from src.constants.config import PATH_ABS
+from src.constants.config import PATH_ABS, ABIS, ADRESSES
 from src.constants.tokens import PNG
 from src.classes.types import TokenData, PairData
 from src.utils.block import get_block_by_timestamp
@@ -17,6 +18,18 @@ from src.utils.token import is_avax
 
 PATH_FONTS = os.path.join(PATH_ABS, "src/fonts")
 PATH_IMAGE = os.path.join(PATH_ABS, "src/images")
+
+
+w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
+w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+MINICHEF = w3.eth.contract(
+    ADRESSES["PANGOLIN_MINICHEF_V2_ADDRESS"],
+    abi=ABIS["MINICHEF_V2"]
+)
+
+
+def get_pools() -> list[str]:
+    return MINICHEF.functions.lpTokens().call()
 
 
 def human_format(num: float | int) -> str:
@@ -151,7 +164,7 @@ def get_pairs_24h_volume(pairs: list[Pair]) -> list[PairData]:
     Returns:
         list[PairData]: list of pairs with volume
     """
-    
+
     # get timestamp from 1 day ago
     timestamp_one_day_back = int(datetime.now().timestamp())-86400
 
