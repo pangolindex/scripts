@@ -12,7 +12,7 @@ from src.top_farms.image import create_image
 from src.top_farms.variations import Variation
 from src.top_farms.get_apr_worker import Worker
 from src.utils.graph import Graph
-from src.utils.utils import get_pools
+from src.utils.utils import get_pools, MINICHEF, w3
 
 logger = logging.getLogger()
 
