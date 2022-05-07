@@ -112,7 +112,7 @@ def get_tokens_24h_volume(tokens: list[Token]) -> list[TokenData]:
 
     block = get_block_by_timestamp(timestamp_one_day_back)
     template = '''
-        last_token_{0}: tokens(
+        last_token_{0}: token(
             id: "{0}",
         ){{
             tradeVolumeUSD
