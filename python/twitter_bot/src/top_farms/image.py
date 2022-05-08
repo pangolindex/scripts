@@ -55,14 +55,14 @@ def create_image_10(farms: list[FarmData], variation: Variation) -> BytesIO:
         pair = farm["pair"]
         # paste the token logo
         logo0 = get_logo(pair.token0, 24)
-        img.paste(logo0, (750, 212 + i * 50), logo0)
+        img.paste(logo0, (730, 212 + i * 50), logo0)
         logo1 = get_logo(pair.token1, 24)
-        img.paste(logo1, (770, 212 + i * 50), logo1)
+        img.paste(logo1, (750, 212 + i * 50), logo1)
 
         text = f"{pair.name}"
         _, y = draw.textsize(text, font=POPPINS_20)
         draw.text(
-            (780, (200+(y//2)) + i * 50),
+            (790, (200+(y//2)) + i * 50),
             text,
             font=POPPINS_20,
             fill=(255, 255, 255, 255)
