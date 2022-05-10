@@ -57,7 +57,7 @@ def create_image(tokens: list[TokenData]) -> BytesIO:
         text = f"{token.symbol}"
         _, y = draw.textsize(text, font=POPPINS_20)
         draw.text(
-            (780, (220-(y//2)) + i * 50),
+            (790, (220-(y//2)) + i * 50),
             text,
             font=POPPINS_20,
             fill=(255, 255, 255, 255)
