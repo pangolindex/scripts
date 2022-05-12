@@ -17,7 +17,7 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const multisigAddress = ADDRESS.PANGOLIN_SUPER_FARM_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
 const rewarders = [
     [{
