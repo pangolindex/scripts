@@ -32,6 +32,13 @@ const Helpers = {
         return Helpers.token1Cache[address] = await contract.methods.token1().call();
     },
 
+    getTokensCached: async (address) => {
+        return await Promise.all([
+            Helpers.getToken0Cached(address),
+            Helpers.getToken1Cached(address),
+        ]);
+    },
+
     async promiseAllChunked(data, handlerFn, chunkSize, progressFn, delay) {
         const clonedData = [...data];
         let results = [];

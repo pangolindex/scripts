@@ -1,9 +1,12 @@
-// Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
-
 const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+const CONSTANTS = require('../core/constants');
+const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
+const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -14,6 +17,10 @@ let endingAvax;
 // Change These Variables
 // --------------------------------------------------
 const MIN_PROFIT_AVAX = 0.05;
+const SLIPPAGE_BIPS = 500; // 5%
+const sender = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const senderType = CONSTANTS.EOA;
+const bytecodeOnly = true;
 // --------------------------------------------------
 
 
@@ -68,10 +75,8 @@ const MIN_PROFIT_AVAX = 0.05;
 
     const sortedPositions = positions.sort((a,b) => a.valueUSD > b.valueUSD ? -1 : 1);
 
-    let baseGasPrice = 0;
     let bestProfit = 0;
-    let bestTx = null;
-    let bestGas = null;
+    let bestPositions = [];
 
     for (let i = 0; i < sortedPositions.length; i++) {
         const acceptedPositions = sortedPositions.slice(0, i + 1);
@@ -84,9 +89,10 @@ const MIN_PROFIT_AVAX = 0.05;
         const tx = feeCollectorContract.methods.harvest(
             acceptedPositions.map(p => p.pgl),
             false, // claimMiniChef
+            0, // calculate slippage later
         );
-        const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
-        baseGasPrice = await web3.eth.getGasPrice();
+        const gas = await tx.estimateGas({ from: sender });
+        const baseGasPrice = await web3.eth.getGasPrice();
         const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('2', 'nano'));
         const expectedGasAVAX = gas * expectedGasPrice / (10 ** 18);
         const expectedProfit = harvestIncentiveValueAVAX - expectedGasAVAX;
@@ -104,9 +110,8 @@ const MIN_PROFIT_AVAX = 0.05;
             console.log(`Estimated gas cost of ~${expectedGasAVAX.toLocaleString(undefined, {minimumFractionDigits: 3})} AVAX`);
             console.log();
 
+            bestPositions = acceptedPositions;
             bestProfit = expectedProfit;
-            bestTx = tx;
-            bestGas = gas;
         } else {
             // Previous scenario was best
             break;
@@ -114,19 +119,101 @@ const MIN_PROFIT_AVAX = 0.05;
     }
 
     if (bestProfit > MIN_PROFIT_AVAX) {
-        console.log('Sending harvest() ...');
-        const receipt = await bestTx.send({
-            from: CONFIG.WALLET.ADDRESS,
-            gas: bestGas,
-            maxFeePerGas: baseGasPrice * 2,
-            maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
-        });
+        console.log(`Calculating PNG received and slippage ...`);
+        console.log();
 
-        if (!receipt?.status) {
-            console.log(receipt);
-            process.exit(1);
-        } else {
-            console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
+        const positionInfos = await Promise.all(bestPositions.map(getPositionInfo));
+
+        let pngReceived = web3.utils.toBN(0);
+
+        for (const [ pglOwned, pglTotal, { reserve0, reserve1 }, token0, token1 ] of positionInfos) {
+            const token0Amount = pglOwned.mul(reserve0).div(pglTotal);
+            const token1Amount = pglOwned.mul(reserve1).div(pglTotal);
+
+            if (token0 !== ADDRESS.PNG) {
+                pngReceived.iadd(await estimateSwap(token0, ADDRESS.PNG, token0Amount));
+            } else {
+                pngReceived.iadd(token0Amount);
+            }
+
+            if (token1 !== ADDRESS.PNG) {
+                pngReceived.iadd(await estimateSwap(token1, ADDRESS.PNG, token1Amount));
+            } else {
+                pngReceived.iadd(token1Amount);
+            }
+        }
+
+        console.log(`Estimated PNG buyback of ${(pngReceived / (10 ** 18)).toLocaleString(undefined, {maximumFractionDigits: 3})}`);
+        console.log();
+
+        const tx = feeCollectorContract.methods.harvest(
+            bestPositions.map(p => p.pgl),
+            false, // claimMiniChef
+            pngReceived.muln(10000 - SLIPPAGE_BIPS).divn(10000), // minPng
+        );
+
+        console.log(`Encoding bytecode ...`);
+        const bytecode = tx.encodeABI();
+        const fileName = path.basename(__filename, '.js');
+        const fileOutput = path.join(__dirname, `${fileName}-bytecode.txt`);
+        fs.writeFileSync(fileOutput, bytecode);
+        console.log(`Encoded bytecode to ${fileOutput}`);
+        console.log();
+
+        if (bytecodeOnly) {
+            console.log(`Skipping execution due to "bytecodeOnly" flag`);
+            return;
+        }
+
+        let receipt;
+
+        switch (senderType) {
+            case CONSTANTS.GNOSIS_MULTISIG:
+                console.log(`Proposing via gnosis multisig ...`);
+                receipt = await gnosisMultisigPropose({
+                    multisigAddress: sender,
+                    destination: ADDRESS.FEE_COLLECTOR,
+                    value: 0,
+                    bytecode,
+                });
+
+                if (!receipt?.status) {
+                    console.log(receipt);
+                    process.exit(1);
+                } else {
+                    console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
+                }
+                break;
+            case CONSTANTS.GNOSIS_SAFE:
+                console.log(`Proposing via gnosis safe ...`);
+                await gnosisSafePropose({
+                    multisigAddress: sender,
+                    destination: ADDRESS.FEE_COLLECTOR,
+                    value: 0,
+                    bytecode,
+                });
+                break;
+            case CONSTANTS.EOA:
+                const gas = await tx.estimateGas({ from: sender });
+                const baseGasPrice = await web3.eth.getGasPrice();
+
+                console.log('Sending harvest() via EOA ...');
+                receipt = await tx.send({
+                    from: sender,
+                    gas: gas,
+                    maxFeePerGas: baseGasPrice * 2,
+                    maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+                });
+
+                if (!receipt?.status) {
+                    console.log(receipt);
+                    process.exit(1);
+                } else {
+                    console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
+                }
+                break;
+            default:
+                throw new Error(`Unknown sender type: ${senderType}`);
         }
     } else {
         console.log(`No profitable harvests detected`);
@@ -143,4 +230,31 @@ const MIN_PROFIT_AVAX = 0.05;
 
 function snowtraceLink(hash) {
     return `https://snowtrace.io/tx/${hash}`;
+}
+
+function getPositionInfo(position) {
+    const pglContract = new web3.eth.Contract(ABI.PAIR, position.pgl);
+    return Promise.all([
+        pglContract.methods.balanceOf(ADDRESS.FEE_COLLECTOR).call().then(web3.utils.toBN),
+        pglContract.methods.totalSupply().call().then(web3.utils.toBN),
+        pglContract.methods.getReserves().call()
+            .then(({_reserve0, _reserve1}) => ({
+                reserve0: web3.utils.toBN(_reserve0),
+                reserve1: web3.utils.toBN(_reserve1),
+            })),
+        pglContract.methods.token0().call(),
+        pglContract.methods.token1().call(),
+    ]);
+}
+
+async function estimateSwap(token, outputToken, amount) {
+    const router = new web3.eth.Contract(ABI.ROUTER, ADDRESS.PANGOLIN_ROUTER);
+
+    if (token === ADDRESS.WAVAX) {
+        const amountsOut = await router.methods.getAmountsOut(amount, [token, outputToken]).call();
+        return web3.utils.toBN(amountsOut[1]);
+    } else {
+        const amountsOut = await router.methods.getAmountsOut(amount, [token, ADDRESS.WAVAX, outputToken]).call();
+        return web3.utils.toBN(amountsOut[2]);
+    }
 }
