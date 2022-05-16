@@ -79,12 +79,6 @@ YAY = Token(
     "YAY",
     "https://s2.coinmarketcap.com/static/img/coins/200x200/11664.png"
 )
-CLY = Token(
-    "0xec3492a2508ddf4fdc0cd76f31f340b30d1793e6",
-    "Colony Token",
-    "CLY",
-    "https://raw.githubusercontent.com/pangolindex/tokens/3f4d4a663e5b99fa001b3ca1cc29bbda065e2b41/assets/0xec3492a2508DDf4FDc0cD76F31f340b30d1793e6/logo.png"
-)
 ISA = Token(
     "0x3eefb18003d033661f84e48360ebecd181a84709",
     "Islander",
