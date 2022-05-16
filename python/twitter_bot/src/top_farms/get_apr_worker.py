@@ -2,13 +2,14 @@ import requests
 from queue import Queue
 from threading import Thread
 
+from src.classes.types import APRData
 class Worker(Thread):
     def __init__(self, queue: Queue):
         Thread.__init__(self)
 
         self.queue = queue
 
-        self.results = None
+        self.results: list[APRData] | None = None
 
     def run(self):
         """
@@ -17,10 +18,7 @@ class Worker(Thread):
                 kargs: dict[string, any]
             }
         """
-        while True:
-            if(self.queue.empty()):
-                break
-
+        while not (self.queue.empty()):
             pid = self.queue.get()
             try:
                 response = requests.get(f'https://api.pangolin.exchange/pangolin/apr2/{pid}')
@@ -31,8 +29,7 @@ class Worker(Thread):
                         'apr': result 
                     }]
                 else:
-                    self.results.append(
-                        {
+                    self.results.append({
                         'pid': pid,
                         'apr': result 
                     })

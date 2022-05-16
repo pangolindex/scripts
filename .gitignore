@@ -21,6 +21,7 @@ typings/
 
 # IDE files
 .idea/
+.vscode/
 
 # Config secrets
 config/config.js
