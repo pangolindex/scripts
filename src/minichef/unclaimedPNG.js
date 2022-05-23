@@ -5,14 +5,15 @@ const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/
 
 // Change these variables
 // -----------------------------------------------------------------
-const pid = 100; // PID of the farm in MiniChef
+const pid = 75; // PID of the farm in MiniChef
 
-const startBlock = 12683488; // Block before the PGL (use PGL creation block for simplicity)
+const startBlock = 10396912; // Block before the PGL (use PGL creation block for simplicity)
 const blockRange = 2048; // Number of block events to fetch per batch
 // -----------------------------------------------------------------
 
 
-const users = new Set();
+const usersWhoDeposited = new Set();
+const usersWithPending = new Set();
 const blockRanges = [];
 let processedRangeCount = 0;
 let processedUserCount = 0;
@@ -44,26 +45,28 @@ const chefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MIN
   }
 
   console.log(`Users:`);
-  console.log(users);
+  console.log(usersWhoDeposited);
 
   console.log();
-  console.log(`Processing ${users.size} users ...`);
+  console.log(`Processing ${usersWhoDeposited.size} users ...`);
 
   let outstandingBal = 0;
 
-  for (const userAddress of users) {
+  for (const userAddress of usersWhoDeposited) {
     try {
-      outstandingBal += parseInt(await chefContract.methods.pendingReward(pid, userAddress).call());
+      const pending = parseInt(await chefContract.methods.pendingReward(pid, userAddress).call());
+      if (pending > 0) usersWithPending.add(userAddress);
+      outstandingBal += pending;
     } catch (e) {
       console.error(`${e.message} (${userAddress})`);
     }
-    if (++processedUserCount % 50 === 0 || processedUserCount === users.size) {
-      console.log(`Processed ${processedUserCount} of ${users.size} users (${(processedUserCount / users.size * 100).toFixed(1)}%)`);
+    if (++processedUserCount % 50 === 0 || processedUserCount === usersWhoDeposited.size) {
+      console.log(`Processed ${processedUserCount} of ${usersWhoDeposited.size} users (${(processedUserCount / usersWhoDeposited.size * 100).toFixed(1)}%)`);
     }
   }
 
   console.log();
-  console.log(`Identified ${outstandingBal / (10 ** 18)} outstanding claimable PNG`);
+  console.log(`Identified ${outstandingBal / (10 ** 18)} outstanding claimable PNG from ${usersWithPending.size} users`);
 })()
   .catch(console.error)
   .then(process.exit);
@@ -81,7 +84,7 @@ async function processRange(range) {
   for (const event of events) {
     if (parseInt(event.returnValues.amount) > 0) {
       const to = web3.utils.toChecksumAddress(event.returnValues.to);
-      users.add(to);
+      usersWhoDeposited.add(to);
     }
   }
   console.log(`Processed ranges ${++processedRangeCount} of ${blockRanges.length} (${(processedRangeCount / blockRanges.length * 100).toFixed(1)}%)`);

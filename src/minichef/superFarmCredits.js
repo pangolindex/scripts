@@ -12,7 +12,8 @@ const blockRange = 2048; // Number of block events to fetch per batch
 // -----------------------------------------------------------------
 
 
-const users = new Set();
+const usersWhoDeposited = new Set();
+const usersWithPending = new Set();
 const blockRanges = [];
 let processedRangeCount = 0;
 let processedUserCount = 0;
@@ -61,25 +62,28 @@ const chefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MIN
     await processRange(range);
   }
 
+  let outstandingPendingPNG = 0;
   const outstandingBalances = rewardAddresses.reduce((map, addr) => ({...map, [addr]: {}}), {});
   const outstandingBalanceTotals = rewardAddresses.reduce((map, addr) => ({...map, [addr]: 0}), {});
 
   console.log(`Users:`);
-  console.log(users);
+  console.log(usersWhoDeposited);
 
   console.log();
-  console.log(`Fetching pending balances for ${users.size} users ...`);
+  console.log(`Fetching pending balances for ${usersWhoDeposited.size} users ...`);
 
-  for (const userAddress of users) {
+  for (const userAddress of usersWhoDeposited) {
     let pendingPNG = 0;
     try {
       pendingPNG = await chefContract.methods.pendingReward(pid, userAddress).call();
+      if (pendingPNG > 0) usersWithPending.add(userAddress);
+      outstandingPendingPNG += parseInt(pendingPNG);
     } catch (e) {
       console.error(`${e.message} (${userAddress})`);
     }
     const pendingTokensDebtResult = await rewarderContract.methods.pendingTokensDebt(pid, userAddress, pendingPNG).call();
-    if (++processedUserCount % 50 === 0 || processedUserCount === users.size) {
-      console.log(`Processed ${processedUserCount} of ${users.size} users (${(processedUserCount / users.size * 100).toFixed(1)}%)`);
+    if (++processedUserCount % 50 === 0 || processedUserCount === usersWhoDeposited.size) {
+      console.log(`Processed ${processedUserCount} of ${usersWhoDeposited.size} users (${(processedUserCount / usersWhoDeposited.size * 100).toFixed(1)}%)`);
     }
     for (let i = 0; i < pendingTokensDebtResult.tokens.length; i++) {
       const token = pendingTokensDebtResult.tokens[i];
@@ -100,6 +104,8 @@ const chefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MIN
   }
 
   console.log();
+
+  console.log(`Identified ${outstandingPendingPNG / (10 ** 18)} outstanding claimable PNG from ${usersWithPending.size} users`);
 
   for (const [token, amount] of Object.entries(outstandingBalanceTotals)) {
     console.log(`Identified ${amount / (10 ** rewardInfo[token].decimals)} outstanding claimable ${rewardInfo[token].symbol}`);
@@ -122,7 +128,7 @@ async function processRange(range) {
   for (const event of events) {
     if (parseInt(event.returnValues.amount) > 0) {
       const to = web3.utils.toChecksumAddress(event.returnValues.to);
-      users.add(to);
+      usersWhoDeposited.add(to);
     }
   }
   console.log(`Processed ranges ${++processedRangeCount} of ${blockRanges.length} (${(processedRangeCount / blockRanges.length * 100).toFixed(1)}%)`);
