@@ -4,6 +4,7 @@ const axios = require('axios');
 // Change These Variables
 // --------------------------------------------------
 const PAIR = '0xdeabb6e80141f5e557ecbdd7e9580f37d7bbc371';
+const HOLDERS = 500;
 // --------------------------------------------------
 
 
@@ -11,12 +12,12 @@ const PAIR = '0xdeabb6e80141f5e557ecbdd7e9580f37d7bbc371';
     const TWO_DECIMAL_LOCALE = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
     const { data: { data: { liquidityPositions } } } = await axios({
-        url: 'https://api.thegraph.com/subgraphs/name/pangolindex/exchange',
+        url: 'https://api.thegraph.com/subgraphs/name/pangolindex/exchange-staging',
         method: 'post',
         data: {
             query: `query {
                 liquidityPositions(
-                    first: 1000
+                    first: ${Math.min(HOLDERS, 1000)}
                     where: {
                         pair: "${PAIR.toLowerCase()}"
                         liquidityTokenBalance_gt: 0

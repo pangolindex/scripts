@@ -77,9 +77,11 @@ const bytecodeOnly = true;
 
     let bestProfit = 0;
     let bestPositions = [];
+    let excludedPositions = [];
 
     for (let i = 0; i < sortedPositions.length; i++) {
-        const acceptedPositions = sortedPositions.slice(0, i + 1);
+        const excludedPositionAddresses = excludedPositions.map(pos => pos.pgl);
+        const acceptedPositions = sortedPositions.slice(0, i + 1).filter(pos => !excludedPositionAddresses.includes(pos.pgl));
 
         const totalValueUSD = acceptedPositions.reduce((sum, pos) => sum += pos.valueUSD, 0);
         const totalValueAVAX = acceptedPositions.reduce((sum, pos) => sum += pos.valueAVAX, 0);
@@ -91,7 +93,17 @@ const bytecodeOnly = true;
             false, // claimMiniChef
             0, // calculate slippage later
         );
-        const gas = await tx.estimateGas({ from: sender });
+
+        let gas;
+        try {
+            gas = await tx.estimateGas({ from: sender });
+        } catch (e) {
+            const latestPosition = acceptedPositions[acceptedPositions.length - 1];
+            excludedPositions.push(latestPosition);
+            console.error(`Excluding ${latestPosition.pgl} in buyback due to error estimating harvest()`);
+            console.log();
+            continue;
+        }
         const baseGasPrice = await web3.eth.getGasPrice();
         const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('2', 'nano'));
         const expectedGasAVAX = gas * expectedGasPrice / (10 ** 18);
@@ -100,12 +112,6 @@ const bytecodeOnly = true;
         if (expectedProfit >= bestProfit) {
             // Best scenario found
             console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`);
-
-            console.table(acceptedPositions.map(p => ({
-                pgl: p.pgl,
-                value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
-            })));
-
             console.log(`Estimated incentive of $${harvestIncentiveValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)} (${harvestIncentiveValueAVAX.toLocaleString(undefined, {maximumFractionDigits: 3})} AVAX)`);
             console.log(`Estimated gas cost of ~${expectedGasAVAX.toLocaleString(undefined, {minimumFractionDigits: 3})} AVAX`);
             console.log();
@@ -114,109 +120,101 @@ const bytecodeOnly = true;
             bestProfit = expectedProfit;
         } else {
             // Previous scenario was best
+            console.table(bestPositions.map(p => ({
+                pgl: p.pgl,
+                value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
+            })));
             break;
         }
     }
 
-    if (bestProfit > MIN_PROFIT_AVAX) {
-        console.log(`Calculating PNG received and slippage ...`);
-        console.log();
-
-        const positionInfos = await Promise.all(bestPositions.map(getPositionInfo));
-
-        let pngReceived = web3.utils.toBN(0);
-
-        for (const [ pglOwned, pglTotal, { reserve0, reserve1 }, token0, token1 ] of positionInfos) {
-            const token0Amount = pglOwned.mul(reserve0).div(pglTotal);
-            const token1Amount = pglOwned.mul(reserve1).div(pglTotal);
-
-            if (token0 !== ADDRESS.PNG) {
-                pngReceived.iadd(await estimateSwap(token0, ADDRESS.PNG, token0Amount));
-            } else {
-                pngReceived.iadd(token0Amount);
-            }
-
-            if (token1 !== ADDRESS.PNG) {
-                pngReceived.iadd(await estimateSwap(token1, ADDRESS.PNG, token1Amount));
-            } else {
-                pngReceived.iadd(token1Amount);
-            }
-        }
-
-        console.log(`Estimated PNG buyback of ${(pngReceived / (10 ** 18)).toLocaleString(undefined, {maximumFractionDigits: 3})}`);
-        console.log();
-
-        const tx = feeCollectorContract.methods.harvest(
-            bestPositions.map(p => p.pgl),
-            false, // claimMiniChef
-            pngReceived.muln(10000 - SLIPPAGE_BIPS).divn(10000), // minPng
-        );
-
-        console.log(`Encoding bytecode ...`);
-        const bytecode = tx.encodeABI();
-        const fileName = path.basename(__filename, '.js');
-        const fileOutput = path.join(__dirname, `${fileName}-bytecode.txt`);
-        fs.writeFileSync(fileOutput, bytecode);
-        console.log(`Encoded bytecode to ${fileOutput}`);
-        console.log();
-
-        if (bytecodeOnly) {
-            console.log(`Skipping execution due to "bytecodeOnly" flag`);
-            return;
-        }
-
-        let receipt;
-
-        switch (senderType) {
-            case CONSTANTS.GNOSIS_MULTISIG:
-                console.log(`Proposing via gnosis multisig ...`);
-                receipt = await gnosisMultisigPropose({
-                    multisigAddress: sender,
-                    destination: ADDRESS.FEE_COLLECTOR,
-                    value: 0,
-                    bytecode,
-                });
-
-                if (!receipt?.status) {
-                    console.log(receipt);
-                    process.exit(1);
-                } else {
-                    console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
-                }
-                break;
-            case CONSTANTS.GNOSIS_SAFE:
-                console.log(`Proposing via gnosis safe ...`);
-                await gnosisSafePropose({
-                    multisigAddress: sender,
-                    destination: ADDRESS.FEE_COLLECTOR,
-                    value: 0,
-                    bytecode,
-                });
-                break;
-            case CONSTANTS.EOA:
-                const gas = await tx.estimateGas({ from: sender });
-                const baseGasPrice = await web3.eth.getGasPrice();
-
-                console.log('Sending harvest() via EOA ...');
-                receipt = await tx.send({
-                    from: sender,
-                    gas: gas,
-                    maxFeePerGas: baseGasPrice * 2,
-                    maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
-                });
-
-                if (!receipt?.status) {
-                    console.log(receipt);
-                    process.exit(1);
-                } else {
-                    console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
-                }
-                break;
-            default:
-                throw new Error(`Unknown sender type: ${senderType}`);
-        }
-    } else {
+    // Short circuit when threshold not met
+    if (bestProfit < MIN_PROFIT_AVAX) {
         console.log(`No profitable harvests detected`);
+        return;
+    }
+
+    console.log(`Calculating PNG received and slippage ...`);
+    console.log();
+
+    const pngReceived = await calculateReceivedPNG(bestPositions);
+
+    console.log(`Estimated buyback of ${(pngReceived / (10 ** 18)).toLocaleString(undefined, {maximumFractionDigits: 3})} PNG`);
+    console.log();
+
+    const [ currentAPR, newAPR ] = await estimateAPRs(pngReceived);
+
+    console.log(`Expected APR change from ${currentAPR.toNumber().toFixed()}% to ${newAPR.toNumber().toFixed()}%`);
+    console.log();
+
+    const tx = feeCollectorContract.methods.harvest(
+        bestPositions.map(p => p.pgl),
+        false, // claimMiniChef
+        pngReceived.muln(10000 - SLIPPAGE_BIPS).divn(10000), // minPng
+    );
+
+    console.log(`Encoding bytecode ...`);
+    const bytecode = tx.encodeABI();
+    const fileName = path.basename(__filename, '.js');
+    const fileOutput = path.join(__dirname, `${fileName}-bytecode.txt`);
+    fs.writeFileSync(fileOutput, bytecode);
+    console.log(`Encoded bytecode to ${fileOutput}`);
+    console.log();
+
+    if (bytecodeOnly) {
+        console.log(`Skipping execution due to "bytecodeOnly" flag`);
+        return;
+    }
+
+    let receipt;
+
+    switch (senderType) {
+        case CONSTANTS.GNOSIS_MULTISIG:
+            console.log(`Proposing via gnosis multisig ...`);
+            receipt = await gnosisMultisigPropose({
+                multisigAddress: sender,
+                destination: ADDRESS.FEE_COLLECTOR,
+                value: 0,
+                bytecode,
+            });
+
+            if (!receipt?.status) {
+                console.log(receipt);
+                process.exit(1);
+            } else {
+                console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
+            }
+            break;
+        case CONSTANTS.GNOSIS_SAFE:
+            console.log(`Proposing via gnosis safe ...`);
+            await gnosisSafePropose({
+                multisigAddress: sender,
+                destination: ADDRESS.FEE_COLLECTOR,
+                value: 0,
+                bytecode,
+            });
+            break;
+        case CONSTANTS.EOA:
+            const gas = await tx.estimateGas({ from: sender });
+            const baseGasPrice = await web3.eth.getGasPrice();
+
+            console.log('Sending harvest() via EOA ...');
+            receipt = await tx.send({
+                from: sender,
+                gas: gas,
+                maxFeePerGas: baseGasPrice * 2,
+                maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+            });
+
+            if (!receipt?.status) {
+                console.log(receipt);
+                process.exit(1);
+            } else {
+                console.log(`Transaction hash: ${snowtraceLink(receipt.transactionHash)}`);
+            }
+            break;
+        default:
+            throw new Error(`Unknown sender type: ${senderType}`);
     }
 
     console.log();
@@ -230,6 +228,31 @@ const bytecodeOnly = true;
 
 function snowtraceLink(hash) {
     return `https://snowtrace.io/tx/${hash}`;
+}
+
+async function calculateReceivedPNG(positions) {
+    let pngReceived = web3.utils.toBN(0);
+
+    const positionInfos = await Promise.all(positions.map(getPositionInfo));
+
+    for (const [ pglOwned, pglTotal, { reserve0, reserve1 }, token0, token1 ] of positionInfos) {
+        const token0Amount = pglOwned.mul(reserve0).div(pglTotal);
+        const token1Amount = pglOwned.mul(reserve1).div(pglTotal);
+
+        if (token0 !== ADDRESS.PNG) {
+            pngReceived.iadd(await estimateSwap(token0, ADDRESS.PNG, token0Amount));
+        } else {
+            pngReceived.iadd(token0Amount);
+        }
+
+        if (token1 !== ADDRESS.PNG) {
+            pngReceived.iadd(await estimateSwap(token1, ADDRESS.PNG, token1Amount));
+        } else {
+            pngReceived.iadd(token1Amount);
+        }
+    }
+
+    return pngReceived;
 }
 
 function getPositionInfo(position) {
@@ -257,4 +280,30 @@ async function estimateSwap(token, outputToken, amount) {
         const amountsOut = await router.methods.getAmountsOut(amount, [token, ADDRESS.WAVAX, outputToken]).call();
         return web3.utils.toBN(amountsOut[2]);
     }
+}
+
+async function estimateAPRs(pngReceived) {
+    const stakingRewardsContract = new web3.eth.Contract(ABI.STAKING_REWARDS, ADDRESS.PNG_PNG_STAKING);
+
+    const [rewardsDuration, periodFinish, currentRewardRate, currentStakedPNG] = await Promise.all([
+        stakingRewardsContract.methods.rewardsDuration().call().then(web3.utils.toBN),
+        stakingRewardsContract.methods.periodFinish().call().then(web3.utils.toBN),
+        stakingRewardsContract.methods.rewardRate().call().then(web3.utils.toBN),
+        stakingRewardsContract.methods.totalSupply().call().then(web3.utils.toBN),
+    ])
+
+    const ZERO = web3.utils.toBN(0);
+    const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
+    const now = web3.utils.toBN(Math.floor(Date.now() / 1000));
+    const isExpired = now.gte(periodFinish);
+    const currentRewards = isExpired ? ZERO : periodFinish.sub(now).mul(currentRewardRate);
+    const newRewards = currentRewards.add(pngReceived.muln(85).divn(100));
+    const newRewardRate = newRewards.div(rewardsDuration);
+
+    const currentAPR = isExpired
+        ? ZERO
+        : currentRewardRate.muln(SECONDS_IN_YEAR).muln(100).div(currentStakedPNG);
+    const newAPR = newRewardRate.muln(SECONDS_IN_YEAR).muln(100).div(currentStakedPNG);
+
+    return [ currentAPR, newAPR ];
 }
