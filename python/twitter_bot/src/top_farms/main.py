@@ -6,6 +6,7 @@ from tweepy import API, Client
 from src.classes.pair import Pair
 from src.classes.token import Token
 from src.classes.types import APRData, FarmData
+from src.constants.blacklist import BLACKLIST
 from src.constants.config import ABIS
 from src.constants.tokens import PNG
 from src.top_farms.image import create_image
@@ -118,6 +119,14 @@ def get_pool_info(
         pools_info = list(filter(lambda x: len(x['rewards']) > 1, pools_info))
     elif variation.only_farms:
         pools_info = list(filter(lambda x: len(x['rewards']) == 1, pools_info))
+
+    # Remove farms with blacklisted tokens
+    pools_info = list(
+        filter(
+            lambda pool: pool["pair"].token0 not in BLACKLIST and pool["pair"].token1 not in BLACKLIST,
+            pools_info
+        )
+    )
 
     return pools_info[:variation.number_farms]
 

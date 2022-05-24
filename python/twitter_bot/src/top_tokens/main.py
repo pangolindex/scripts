@@ -4,6 +4,7 @@ from datetime import datetime
 from tweepy import API, Client
 
 from src.classes.token import Token
+from src.constants.blacklist import BLACKLIST
 from src.top_tokens.image import create_image
 from src.utils.graph import Graph
 from src.utils.utils import get_tokens_24h_volume, human_format
@@ -36,7 +37,24 @@ def get_tokens() -> list[Token]:
 
     result = graph.query(query)
 
-    tokens = list(map(lambda token: Token(token["token"]["id"], token["token"]["name"], token["token"]["symbol"]), result["tokenDayDatas"]))
+    tokens = list(
+        map(
+            lambda token: Token(
+                address = token["token"]["id"],
+                name = token["token"]["name"],
+                symbol = token["token"]["symbol"]
+            ),
+            result["tokenDayDatas"]
+        )
+    )
+    
+    tokens = list(
+        filter(
+            lambda token: token not in BLACKLIST,
+            tokens
+        )
+    )
+    
     return tokens
 
 

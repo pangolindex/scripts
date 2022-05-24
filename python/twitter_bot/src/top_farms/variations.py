@@ -28,7 +28,8 @@ class Variation:
         
     def text(self):
         farm_text = "super farms" if self.only_super_farms else "farms" if self.only_farms else "farms and super farms"
-        return f"Top {self.number_farms} {farm_text} on @pangolindex by {self.order_by}."
+        order_text = "APR" if self.order_by == "APR" else "TVL" if self.order_by == "TVL" else "Volume"
+        return f"Top {self.number_farms} {farm_text} on @pangolindex by {order_text}."
     
     def img_text(self):
         farm_text = "super farms" if self.only_super_farms else "farms" if self.only_farms else "farms and super farms"
