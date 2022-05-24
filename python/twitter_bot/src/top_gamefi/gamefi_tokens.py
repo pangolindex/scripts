@@ -100,6 +100,5 @@ GAMEFI_TOKENS = [
     RACEX,
     DCAU,
     YAY,
-    CLY,
     ISA,
 ]

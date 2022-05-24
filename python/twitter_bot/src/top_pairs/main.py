@@ -5,6 +5,7 @@ from tweepy import API, Client
 
 from src.classes.pair import Pair
 from src.classes.token import Token
+from src.constants.blacklist import BLACKLIST
 from src.top_pairs.image import create_image
 from src.utils.graph import Graph
 from src.utils.utils import get_pairs_24h_volume, human_format
@@ -58,6 +59,14 @@ def get_pairs() -> list[Pair]:
         return Pair(pair_data["pairAddress"], token0, token1)
 
     pairs = list(map(lambda pair: create_pair(pair), result["pairDayDatas"]))
+    
+    pairs = list(
+        filter(
+            lambda pair: pair.token0 not in BLACKLIST and pair.token1 not in BLACKLIST,
+            pairs
+        )
+    )
+    
     return pairs
 
 
