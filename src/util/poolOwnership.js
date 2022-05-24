@@ -55,11 +55,15 @@ const HOLDERS = 500;
         if (parseFloat(position.pair.reserveUSD) === 0) continue;
 
         const percentOwnership = parseFloat(position.liquidityTokenBalance) / parseFloat(position.pair.totalSupply);
+        
+        const code = await web3.eth.getCode(position.user.id);
+        const accType = ((code == "0x") ? "Wallet" : "Contract");
 
         positions.push({
             owner: position.user.id,
             // ownerLink: `https://snowtrace.io/address/${position.user.id}`,
             'ownership (%)': (percentOwnership * 100).toFixed(2),
+            'account type': accType,
             'valueUSD ($)': (percentOwnership * parseFloat(position.pair.reserveUSD)).toLocaleString(undefined, TWO_DECIMAL_LOCALE),
         });
     }
