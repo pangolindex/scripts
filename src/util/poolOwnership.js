@@ -57,7 +57,7 @@ const HOLDERS = 500;
         const percentOwnership = parseFloat(position.liquidityTokenBalance) / parseFloat(position.pair.totalSupply);
         
         const code = await web3.eth.getCode(position.user.id);
-        const accType = ((code == "0x") ? "Wallet" : "Contract");
+        const accType = (code === '0x') ? 'Wallet' : 'Contract';
 
         positions.push({
             owner: position.user.id,
