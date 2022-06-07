@@ -16,8 +16,9 @@ let endingAvax;
 
 // Change These Variables
 // --------------------------------------------------
-const MIN_PROFIT_AVAX = 0.05;
-const SLIPPAGE_BIPS = 500; // 5%
+const MIN_PROFIT_AVAX = 0.05; // Only used when incentive fee is enabled
+const MIN_VALUE_USD = 200;
+const SLIPPAGE_BIPS = 1500; // 15%
 const sender = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const senderType = CONSTANTS.EOA;
 const bytecodeOnly = true;
@@ -77,16 +78,14 @@ const bytecodeOnly = true;
 
     let bestProfit = 0;
     let bestPositions = [];
-    let excludedPositions = [];
+    let excludedPositionAddresses = [];
 
     for (let i = 0; i < sortedPositions.length; i++) {
-        const excludedPositionAddresses = excludedPositions.map(pos => pos.pgl);
         const acceptedPositions = sortedPositions.slice(0, i + 1).filter(pos => !excludedPositionAddresses.includes(pos.pgl));
+        const latestPosition = acceptedPositions[acceptedPositions.length - 1];
 
         const totalValueUSD = acceptedPositions.reduce((sum, pos) => sum += pos.valueUSD, 0);
         const totalValueAVAX = acceptedPositions.reduce((sum, pos) => sum += pos.valueAVAX, 0);
-        const harvestIncentiveValueUSD = totalValueUSD * (harvestIncentive / feeDenominator);
-        const harvestIncentiveValueAVAX = totalValueAVAX * (harvestIncentive / feeDenominator);
 
         const tx = feeCollectorContract.methods.harvest(
             acceptedPositions.map(p => p.pgl),
@@ -98,8 +97,7 @@ const bytecodeOnly = true;
         try {
             gas = await tx.estimateGas({ from: sender });
         } catch (e) {
-            const latestPosition = acceptedPositions[acceptedPositions.length - 1];
-            excludedPositions.push(latestPosition);
+            excludedPositionAddresses.push(latestPosition.pgl);
             console.error(`Excluding ${latestPosition.pgl} in buyback due to error estimating harvest()`);
             console.log();
             continue;
@@ -107,31 +105,58 @@ const bytecodeOnly = true;
         const baseGasPrice = await web3.eth.getGasPrice();
         const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('2', 'nano'));
         const expectedGasAVAX = gas * expectedGasPrice / (10 ** 18);
-        const expectedProfit = harvestIncentiveValueAVAX - expectedGasAVAX;
 
-        if (expectedProfit >= bestProfit) {
-            // Best scenario found
-            console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`);
-            console.log(`Estimated incentive of $${harvestIncentiveValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)} (${harvestIncentiveValueAVAX.toLocaleString(undefined, {maximumFractionDigits: 3})} AVAX)`);
-            console.log(`Estimated gas cost of ~${expectedGasAVAX.toLocaleString(undefined, {minimumFractionDigits: 3})} AVAX`);
-            console.log();
+        if (harvestIncentive > 0) {
+            const harvestIncentiveValueUSD = totalValueUSD * (harvestIncentive / feeDenominator);
+            const harvestIncentiveValueAVAX = totalValueAVAX * (harvestIncentive / feeDenominator);
+            const expectedProfit = harvestIncentiveValueAVAX - expectedGasAVAX;
 
-            bestPositions = acceptedPositions;
-            bestProfit = expectedProfit;
+            if (expectedProfit >= bestProfit) {
+                // Best scenario found
+                console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`);
+                console.log(`Estimated incentive of $${harvestIncentiveValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)} (${harvestIncentiveValueAVAX.toLocaleString(undefined, {maximumFractionDigits: 3})} AVAX)`);
+                console.log(`Estimated gas cost of ~${expectedGasAVAX.toLocaleString(undefined, {minimumFractionDigits: 3})} AVAX (${gas})`);
+                console.log();
+
+                bestPositions = acceptedPositions;
+                bestProfit = expectedProfit;
+            } else {
+                if (bestPositions.length === 0) {
+                    console.log(`No positions found`);
+                    return;
+                }
+                console.table(bestPositions.map(p => ({
+                    pgl: p.pgl,
+                    value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
+                })));
+                break;
+            }
+
+            // Short circuit when threshold not met
+            if (bestProfit < MIN_PROFIT_AVAX) {
+                console.log(`No profitable harvests detected`);
+                return;
+            }
         } else {
-            // Previous scenario was best
-            console.table(bestPositions.map(p => ({
-                pgl: p.pgl,
-                value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
-            })));
-            break;
-        }
-    }
+            if (latestPosition.valueUSD >= MIN_VALUE_USD) {
+                // Best scenario found
+                console.log(`Considering harvesting ${acceptedPositions.length} liquidity positions worth $${totalValueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`);
+                console.log(`Estimated gas cost of ~${expectedGasAVAX.toLocaleString(undefined, {minimumFractionDigits: 3})} AVAX (${gas})`);
+                console.log();
 
-    // Short circuit when threshold not met
-    if (bestProfit < MIN_PROFIT_AVAX) {
-        console.log(`No profitable harvests detected`);
-        return;
+                bestPositions = acceptedPositions;
+            } else {
+                if (bestPositions.length === 0) {
+                    console.log(`No positions found`);
+                    return;
+                }
+                console.table(bestPositions.map(p => ({
+                    pgl: p.pgl,
+                    value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
+                })));
+                break;
+            }
+        }
     }
 
     console.log(`Calculating PNG received and slippage ...`);
@@ -290,7 +315,7 @@ async function estimateAPRs(pngReceived) {
         stakingRewardsContract.methods.periodFinish().call().then(web3.utils.toBN),
         stakingRewardsContract.methods.rewardRate().call().then(web3.utils.toBN),
         stakingRewardsContract.methods.totalSupply().call().then(web3.utils.toBN),
-    ])
+    ]);
 
     const ZERO = web3.utils.toBN(0);
     const SECONDS_IN_YEAR = 365 * 24 * 60 * 60;
