@@ -10,24 +10,35 @@ const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
 
 
 // Change These Variables
 // --------------------------------------------------
 const MIN_PROFIT_AVAX = 0.05; // Only used when incentive fee is enabled
 const MIN_VALUE_USD = 100;
-const SLIPPAGE_BIPS = 1500; // 15%
+const SLIPPAGE_BIPS = 200; // 2%
 const sender = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const senderType = CONSTANTS.EOA;
 const bytecodeOnly = true;
+const INTERVAL = 48 * CONSTANTS.HOUR;
+const INTERVAL_WINDOW = 6 * CONSTANTS.HOUR;
 // --------------------------------------------------
 
+// Globals to manage consistent scheduling with a window of variance
+// Do not touch these :)
+let executionWindowCenter = Date.now();
+let executionDrift = 0;
 
-(async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+// Initialize
+harvestWrapper();
 
+async function harvestWrapper() {
+    harvest()
+        .then(scheduleNextHarvest)
+        .catch(console.error);
+}
+
+async function harvest() {
     const feeCollectorContract = new web3.eth.Contract(ABI.FEE_COLLECTOR, ADDRESS.FEE_COLLECTOR);
     const harvestIncentive = parseInt(await feeCollectorContract.methods.harvestIncentive().call());
     const feeDenominator = parseInt(await feeCollectorContract.methods.FEE_DENOMINATOR().call());
@@ -103,6 +114,12 @@ const bytecodeOnly = true;
             console.log();
             continue;
         }
+
+        if (gas > 7000000) {
+            console.log(`Gas limit exceeded`);
+            break;
+        }
+
         const baseGasPrice = await web3.eth.getGasPrice();
         const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('1', 'nano'));
         const expectedGasAVAX = gas * expectedGasPrice / (10 ** 18);
@@ -122,14 +139,6 @@ const bytecodeOnly = true;
                 bestPositions = acceptedPositions;
                 bestProfit = expectedProfit;
             } else {
-                if (bestPositions.length === 0) {
-                    console.log(`No positions found`);
-                    return;
-                }
-                console.table(bestPositions.map(p => ({
-                    pgl: p.pgl,
-                    value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
-                })));
                 break;
             }
 
@@ -147,18 +156,19 @@ const bytecodeOnly = true;
 
                 bestPositions = acceptedPositions;
             } else {
-                if (bestPositions.length === 0) {
-                    console.log(`No positions found`);
-                    return;
-                }
-                console.table(bestPositions.map(p => ({
-                    pgl: p.pgl,
-                    value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
-                })));
                 break;
             }
         }
     }
+
+    if (bestPositions.length === 0) {
+        console.log(`No positions found`);
+        return;
+    }
+    console.table(bestPositions.map(p => ({
+        pgl: p.pgl,
+        value: `$${p.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE)}`,
+    })));
 
     console.log(`Calculating PNG received and slippage ...`);
     console.log();
@@ -244,16 +254,32 @@ const bytecodeOnly = true;
     }
 
     console.log();
-})()
-  .catch(console.error)
-  .finally(async () => {
-      endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-      console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
-      process.exit(0);
-  });
+}
+
+function scheduleNextHarvest() {
+    //if (bytecodeOnly) return;
+
+    // Avoid potentially scheduling in the past
+    if (INTERVAL_WINDOW >= INTERVAL) throw new Error(`Interval window is too large`);
+
+    executionWindowCenter += INTERVAL;
+    executionDrift = randomIntFromInterval(-1 * INTERVAL_WINDOW, INTERVAL_WINDOW);
+    const now = Date.now();
+    const delay = executionWindowCenter - now + executionDrift;
+    console.log();
+    console.log(`New execution window: ${new Date(executionWindowCenter - INTERVAL_WINDOW).toLocaleTimeString()} - ${new Date(executionWindowCenter + INTERVAL_WINDOW).toLocaleTimeString()}`);
+    console.log(`Scheduled next harvest() for ${new Date(now + delay).toLocaleString()}`);
+    console.log();
+
+    setTimeout(harvestWrapper, delay);
+}
 
 function snowtraceLink(hash) {
     return `https://snowtrace.io/tx/${hash}`;
+}
+
+function randomIntFromInterval(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 async function calculateReceivedPNG(positions) {
