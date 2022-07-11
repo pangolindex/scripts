@@ -34,11 +34,13 @@ const tokens = [
 
     for (const token of tokens) {
         const tokenContract = new web3.eth.Contract(ABI.TOKEN, token.address.toLowerCase());
-        const [ name, symbol, decimals ] = await Promise.all([
-            tokenContract.methods.name().call(),
-            tokenContract.methods.symbol().call(),
-            tokenContract.methods.decimals().call()
-        ]);
+        const [ name, symbol, decimals ] = token.chainId === 43114
+            ? await Promise.all([
+                tokenContract.methods.name().call(),
+                tokenContract.methods.symbol().call(),
+                tokenContract.methods.decimals().call()
+            ])
+            : ['?', '?', '?'];
         table.push({
             name,
             checksum: web3.utils.checkAddressChecksum(token.address),

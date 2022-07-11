@@ -43,7 +43,7 @@ const main = async () => {
                     from: CONFIG.WALLET.ADDRESS,
                     gas,
                     maxFeePerGas: baseGasPrice * 2,
-                    maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+                    maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
                 });
                 console.log(`Transaction hash: ${receipt.transactionHash} (${snowtraceLink(receipt.transactionHash)}`);
             } catch (error) {

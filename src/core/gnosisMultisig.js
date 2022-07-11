@@ -17,7 +17,7 @@ const propose = async ({ multisigAddress, destination, value, bytecode, nonce })
         from: CONFIG.WALLET.ADDRESS,
         gas,
         maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     };
 
     // Conditionally specify nonce
@@ -50,7 +50,7 @@ const confirm = async ({ multisigAddress, id, includeExtraGas, nonce }) => {
         from: CONFIG.WALLET.ADDRESS,
         gas: includeExtraGas ? 7500000 : gas,
         maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     };
 
     // Conditionally specify nonce
@@ -78,7 +78,7 @@ const execute = async ({ multisigAddress, id, nonce }) => {
         from: CONFIG.WALLET.ADDRESS,
         gas: 7500000,
         maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     };
 
     // Conditionally specify nonce
