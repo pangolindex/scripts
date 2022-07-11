@@ -19,15 +19,17 @@ const tokenAddresses = [
 
     for (const tokenAddress of tokenAddresses) {
         const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
-        const [ name, symbol, decimals ] = await Promise.all([
+        const [ name, symbol, decimals, totalSupply ] = await Promise.all([
             tokenContract.methods.name().call(),
             tokenContract.methods.symbol().call(),
-            tokenContract.methods.decimals().call()
+            tokenContract.methods.decimals().call(),
+            tokenContract.methods.totalSupply().call()
         ])
         table.push({
             name,
             symbol,
             decimals,
+            totalSupply: (totalSupply / (10 ** decimals)).toLocaleString(),
         });
     }
 

@@ -17,7 +17,7 @@ let endingAvax;
 // Change These Variables
 // --------------------------------------------------
 const MIN_PROFIT_AVAX = 0.05; // Only used when incentive fee is enabled
-const MIN_VALUE_USD = 200;
+const MIN_VALUE_USD = 100;
 const SLIPPAGE_BIPS = 1500; // 15%
 const sender = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const senderType = CONSTANTS.EOA;
@@ -98,12 +98,13 @@ const bytecodeOnly = true;
             gas = await tx.estimateGas({ from: sender });
         } catch (e) {
             excludedPositionAddresses.push(latestPosition.pgl);
-            console.error(`Excluding ${latestPosition.pgl} in buyback due to error estimating harvest()`);
+            const friendlyUSD = latestPosition.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE);
+            console.error(`Excluding ${latestPosition.pgl} ($${friendlyUSD}) in buyback due to error estimating harvest()`);
             console.log();
             continue;
         }
         const baseGasPrice = await web3.eth.getGasPrice();
-        const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('2', 'nano'));
+        const expectedGasPrice = parseInt(baseGasPrice) + parseInt(web3.utils.toWei('1', 'nano'));
         const expectedGasAVAX = gas * expectedGasPrice / (10 ** 18);
 
         if (harvestIncentive > 0) {
@@ -228,7 +229,7 @@ const bytecodeOnly = true;
                 from: sender,
                 gas: gas,
                 maxFeePerGas: baseGasPrice * 2,
-                maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+                maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
             });
 
             if (!receipt?.status) {
@@ -298,7 +299,7 @@ function getPositionInfo(position) {
 async function estimateSwap(token, outputToken, amount) {
     const router = new web3.eth.Contract(ABI.ROUTER, ADDRESS.PANGOLIN_ROUTER);
 
-    if (token === ADDRESS.WAVAX) {
+    if (token === ADDRESS.WAVAX || outputToken === ADDRESS.WAVAX) {
         const amountsOut = await router.methods.getAmountsOut(amount, [token, outputToken]).call();
         return web3.utils.toBN(amountsOut[1]);
     } else {

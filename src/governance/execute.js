@@ -31,7 +31,7 @@ const proposal = 5;
         from: CONFIG.WALLET.ADDRESS,
         gas: '8000000',
         maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     });
 })()
     .catch(console.error)

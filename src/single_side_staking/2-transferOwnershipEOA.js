@@ -32,7 +32,7 @@ let endingAvax;
         from: CONFIG.WALLET.ADDRESS,
         gas,
         maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('2', 'nano'),
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     });
 
     if (!receipt?.status) {
