@@ -21,6 +21,11 @@ PATH_CHAINS = join(PATH_ABS, "src/constants/chains.json")
 PATH_AIRDROPS_CONFIG = join(PATH_ABS, "airdrops")
 
 def get_git_revision_hash() -> str:
+    """Get last commit hash
+
+    Returns:
+        str: last commit hash
+    """
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 def update_chains(chains: dict[str, any]) -> None:
@@ -130,6 +135,11 @@ def get_config_from_file(file: str | None = None) -> dict[str, any]:
     return config
 
 def save_config_to_file(config: dict[str, any]) -> None:
+    """Generate a config file from a config dict
+
+    Args:
+        config (dict[str, any]): airdrop config dict
+    """
     config_name = inquirer.text(
         message="Insert name of this airdrop config:",
         validate=EmptyInputValidator()
@@ -142,6 +152,8 @@ def save_config_to_file(config: dict[str, any]) -> None:
     config_file.set('airdrop', 'name', config_name)
     config_file.set('airdrop', 'commit_id', get_git_revision_hash())
     config_file.set('airdrop', 'unit', config["unit"])
+    config_file.set('airdrop', 'unit', config["png_supply"])
+    config_file.set('airdrop', 'percentage', config["percentage"])
 
     config_file.add_section("blockchain")
     config_file.set("blockchain", "blockchain", config["blockchain"]["name"])
@@ -157,7 +169,7 @@ def save_config_to_file(config: dict[str, any]) -> None:
             config_file.set(section, "start_block", config[section]["start_block"])
             config_file.set(section, "last_block", config[section]["last_block"])
             
-    file_name = re.sub("\s+", "_", config_name)
+    file_name = re.sub("\s+", "_", config_name) # replace whitespace with "_"
     path = join(PATH_AIRDROPS_CONFIG, f"{file_name}.ini")
     with open(path, 'w') as file:
         config_file.write(file)
@@ -270,6 +282,18 @@ def create_airdrop_config() -> dict[str, any]:
         default='ether',
     ).execute()
     config["unit"] = unit
+    
+    png_supply = inquirer.number(
+        message="What is the PNG supply?",
+        default=230e6,
+    ).execute()
+    config["png_supply"] = png_supply
+    
+    percentage = inquirer.number(
+        message="What is the percentage of the PNG supply to airdrop?",
+        default=5,
+    ).execute()
+    config["percentage"] = percentage
 
     config["id"] = str(uuid5(NAMESPACE_DNS, dumps(config, sort_keys=True)))
     print("Airdrop Config:")
