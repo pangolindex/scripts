@@ -1,6 +1,6 @@
 {
     "AVAX": {
-        "rpc": "http://82.66.52.160:9650/ext/bc/C/rpc",
+        "rpc": "https://api.avax.network/ext/bc/C/rpc",
         "dex": {
             "PNG": {
                 "factory": "0xefa94DE7a4656D787667C749f7E1223D71E9FD88"
