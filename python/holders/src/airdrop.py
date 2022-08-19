@@ -78,8 +78,9 @@ def get_blocks(w3: Web3) -> tuple[int, int]:
     
     return start_block, last_block
 
-def get_config_from_file(file: str = None) -> dict[str, any]:
+def get_config_from_file(file: str | None = None) -> dict[str, any]:
     files = [f for f in listdir(PATH_AIRDROPS_CONFIG) if isfile(join(PATH_AIRDROPS_CONFIG, f))]
+    # if not exist file, select one from list
     if file is None:
         DEFAULT_FILE = "png_holders_1.ini"
         file = inquirer.select(
@@ -94,7 +95,9 @@ def get_config_from_file(file: str = None) -> dict[str, any]:
     config = {
         "id": config_file["airdrop"]["id"],
         "name": config_file["airdrop"]["name"],
-        "unit": config_file["airdrop"]["unit"]
+        "unit": config_file["airdrop"]["unit"],
+        "png_supply": config_file["airdrop"]["png_supply"],
+        "percentage": config_file["airdrop"]["percentage"],
     }
     
     chains = get_chains()

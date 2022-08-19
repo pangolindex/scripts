@@ -1,8 +1,7 @@
-from calendar import c
 import csv
 import os
 
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from datetime import datetime
 from configparser import RawConfigParser
 from web3 import Web3, HTTPProvider
@@ -11,16 +10,14 @@ import math
 from src.airdrop import AIRDROP_CATEGORIES, get_config_from_file
 from src.database.database import Database
 
-#PNG SUPPLY = 230M
-PNG_SUPPLY = Decimal(Web3.toWei(230e6, 'ether'))
-PERCENTAGE = Decimal(5)/Decimal(100)
-AIRDROP_AMOUNT = PNG_SUPPLY*PERCENTAGE # 5% of PNG Supply
-
 def total_categories(database: Database, path: str, airdrop_id: str, categories: list[str]) -> dict[str, Decimal]:
     """This function will calculate the total amount for each category
 
     Args:
         database (Database): database class
+        path (str): path to save the csv file
+        airdrop_id (str): airdrop id to get in the database
+        categories (list[str]): list of categories to get in the database
     """
     with open(os.path.join(path, "total.csv"), 'w') as f:
         writer = csv.writer(f)
@@ -36,6 +33,15 @@ def total_categories(database: Database, path: str, airdrop_id: str, categories:
 
 
 def get_block_date(block_number: int, w3: Web3) -> datetime:
+    """Return the date of a block
+
+    Args:
+        block_number (int): block number
+        w3 (Web3): web3 class
+
+    Returns:
+        datetime: date of the block in datetime format
+    """
     block = w3.eth.get_block(block_number)
     return datetime.utcfromtimestamp(block.timestamp)
 
@@ -68,8 +74,6 @@ def create_category_csv(database: Database, path: str, category: str, days: Deci
             writer.writerows(rows)
 
 def export(config: dict[str, any]) -> None:
-    # Put 18 decimal places in the decimal
-    # getcontext().prec = 18
     # Load config
     config_parser = RawConfigParser()
     config_parser.read('config.ini')
@@ -79,9 +83,15 @@ def export(config: dict[str, any]) -> None:
     if connection_string is None:
         connection_string = config_parser["Mongodb"]["connection_string"]
 
+    # Load png supply and percentage from config
+    PNG_SUPPLY = Decimal(Web3.toWei(config["png_supply"], "ether"))
+    PERCENTAGE = Decimal(config["percentage"])/Decimal(100)
+    AIRDROP_AMOUNT = PNG_SUPPLY*PERCENTAGE
+
     # Database class
     database = Database(connection_string)
 
+    # Path to save the csv files
     path = os.path.abspath(".")
     if not os.path.exists('csv'):
         os.mkdir('csv')
@@ -96,8 +106,10 @@ def export(config: dict[str, any]) -> None:
         if category in config
     ]
     
+    # Get total amount for each category
     total = total_categories(database, path, config["id"], selected_categories)
 
+    # Calculate the total of days for each category
     days: dict[str, Decimal] = {}
     for category in selected_categories:
         start_block = config[category]["start_block"]
@@ -121,6 +133,7 @@ def export(config: dict[str, any]) -> None:
         for category in selected_categories:
             writer.writerow([f"Days {category}", days[category]])
 
+        # write csv title
         writer.writerow(["address", *selected_categories, "total amount", "day average total amount", "allocated amount"])
         total_alocated = Decimal(0)
         for result in results:
@@ -129,18 +142,21 @@ def export(config: dict[str, any]) -> None:
             total = Decimal(0)
             for category in selected_categories:
                 amount = Decimal(Web3.fromWei(result[category], config["unit"]))
-                total += amount
+                total += amount # total amount for each category
                 
                 day_average = Decimal(0) if (days[category] == 0) else amount/days[category]
                 if category.lower() == "lp":
-                    day_average *= Decimal(2)
-                total_avg += day_average
+                    day_average *= Decimal(2) # double the amount for lp holders
+                total_avg += day_average # calculate the total of day average amount for each category
                 row.append(amount)
 
             row.append(total)
             row.append(total_avg)
+            # calculate the allocated amount to airdrop to the address
             allocated = math.trunc((total_avg/total_with_day_avg)*AIRDROP_AMOUNT)
             row.append(allocated)
+            # Write a row to the csv file
+            # Row: address, category1, category2, ..., total amount, day average total amount, allocated amount
             total_alocated += allocated
             writer.writerow(row)
         print(f"Total allocated: {total_alocated:.18f}")
@@ -148,6 +164,6 @@ def export(config: dict[str, any]) -> None:
 
 
 if __name__ == "__main__":
-    config_file = os.environ.get("AIRDROP_CONF")
+    config_file = os.environ.get("AIRDROP_CONF") # get config file from env variable
     config = get_config_from_file(config_file)
     export(config)

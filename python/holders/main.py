@@ -22,6 +22,7 @@ def main():
         print("Exiting ...")
         sys.exit(0)
 
+    # clear screen
     os.system('cls' if os.name == 'nt' else 'clear')
     
     export_airdrop = inquirer.confirm(
