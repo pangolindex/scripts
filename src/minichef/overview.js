@@ -22,9 +22,7 @@ const chunkSize = 10;
     ]);
 
     let lookupDatas = lpTokens.map((pgl, pid) => [pid, pgl]);
-    while (lookupDatas.length) {
-        await Promise.all( lookupDatas.splice(0, chunkSize).map(data => lookup(...data)));
-    }
+    await helpers.promiseAllChunked(lookupDatas, lookup, chunkSize, null, 500);
     table.sort((a,b) => a.pid > b.pid ? 1 : -1);
 
     console.log(`Completed in ${(Date.now() - start) / 1000} sec`);
@@ -33,7 +31,7 @@ const chunkSize = 10;
     console.log(`Total alloc points: ${totalAllocPoints}`);
 
 
-    async function lookup(pid, pgl) {
+    async function lookup([pid, pgl]) {
         const pglContract = new web3.eth.Contract(ABI.PAIR, pgl);
         const [token0Symbol, token1Symbol, rewarder] = await Promise.all([
             pglContract.methods.token0().call().then(helpers.getSymbolCached),

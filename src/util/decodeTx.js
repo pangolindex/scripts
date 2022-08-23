@@ -17,7 +17,7 @@ const bytecode = '0x0';
 
 abiDecoder.addABI(destinationABI);
 
-const decoded = abiDecoder.decodeMethod(bytecode);
+const decoded = abiDecoder.decodeMethod(bytecode.trim());
 console.dir(decoded, { depth: null });
 
 const deadline = decoded?.params?.filter(param => param.name === 'deadline')[0]?.value;
@@ -36,6 +36,6 @@ web3.eth.estimateGas({
     value: 0,
     data: bytecode,
 }, function(error, gas) {
-    if (error) console.error(error);
+    if (error) console.error(error.message);
     else console.log(gas);
 });
