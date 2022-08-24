@@ -45,7 +45,6 @@ class Worker(BaseWoker):
         self.count_tx_lp = 0
 
     def format_lp_transactions(self, transactions:  list[dict[str, any]]) -> list[Transaction]:
-        import time
         def format_to_db(transaction: any) -> Transaction:
             try:
                 args = transaction["args"]
