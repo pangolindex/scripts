@@ -7,7 +7,7 @@ const SafeServiceClient = require('@gnosis.pm/safe-service-client').default;
 const Web3Adapter = require('@gnosis.pm/safe-web3-lib').default;
 
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
+const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 const safeService = new SafeServiceClient('https://safe-transaction.avalanche.gnosis.io');
