@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "fork": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc",
-    "rewarder": "node src/rewardBot.js"
+    "fork": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc"
   },
   "repository": {
     "type": "git",
