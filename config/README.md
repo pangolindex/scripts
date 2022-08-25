@@ -21,7 +21,9 @@ module.exports = {
     WALLET: {
         ADDRESS: '0x93f4B6D7C1f2702A9c5d8219d86a93a12075F2c7',
         KEY: 'ce136b12cc3a2e3b5ecd2ab217b23a09f9512ced50abb121bea394e8bcd3b40b'
-    }
+    },
+  
+    RPC: 'https://api.avax.network/ext/bc/C/rpc'
 
 }
 ```

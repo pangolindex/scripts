@@ -4,7 +4,7 @@ const CONFIG = require('../../config/config');
 const Conversion = require('../core/conversion');
 const Helpers = require('../core/helpers');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
+const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 // Change These Variables
