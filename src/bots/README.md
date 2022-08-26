@@ -32,10 +32,10 @@ pm2 start ecosystem/avalanche.config.js
 
 ### Running Some Bots
 ```bash
-pm2 start ecosystem/avalanche.config.js --only "avalanche/harvester"
+pm2 start ecosystem/avalanche.config.js --only "avalanche/vester"
 ```
 
 ### Viewing Bot Logs
 ```bash
-pm2 logs -f Harvester
+pm2 logs -f vester
 ```

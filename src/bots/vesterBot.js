@@ -60,6 +60,8 @@ async function main() {
             await sleep(delay);
         }
 
+        let errorCount = 0;
+
         // Claim and distribute funds
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
@@ -79,8 +81,11 @@ async function main() {
             } catch (error) {
                 console.error(`Error attempting claimAndDistribute()`);
                 console.error(error.message);
-                await sleep(SECOND);
+                if (++errorCount >= 5) {
+                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                }
             }
+            await sleep(SECOND.muln(5));
         }
     }
 }

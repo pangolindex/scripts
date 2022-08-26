@@ -136,7 +136,7 @@ async function harvest() {
         } catch (e) {
             excludedPositionAddresses.push(latestPosition.pgl);
             const friendlyUSD = latestPosition.valueUSD.toLocaleString(undefined, TWO_DECIMAL_LOCALE);
-            console.error(`Excluding ${latestPosition.pgl} ($${friendlyUSD}) in buyback due to error estimating harvest()`);
+            console.log(`Excluding ${latestPosition.pgl} ($${friendlyUSD}) in buyback due to error estimating harvest()`);
             console.log();
             continue;
         }

@@ -14,8 +14,8 @@ const config = [
     },
   },
   {
-    name: 'harvester',
-    script: './harvesterBot.js',
+    name: 'buyback',
+    script: './buybackBot.js',
     env: {
       WALLET: '',
       KEY: '',
