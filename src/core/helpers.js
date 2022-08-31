@@ -84,6 +84,11 @@ const Helpers = {
     },
 
     toChecksumAddress: (address) => web3.utils.toChecksumAddress(address.toLowerCase()),
+
+    isSameAddress(a, b) {
+        if (!a || !b) return false;
+        return a.toLowerCase() === b.toLowerCase();
+    },
 };
 
 module.exports = Helpers;
