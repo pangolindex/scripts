@@ -25,6 +25,8 @@ typings/
 
 # Config secrets
 config/config.js
+src/bots/ecosystem/*
+!src/bots/ecosystem/example.config.js
 
 # Python
 __pycache__

@@ -21,10 +21,11 @@ You can do this by following the instructions in the [configuration directory](.
 This directory contains some core logic (think library) used to support other scripts in the repo. 
 You shouldn't need to play around in here.
 
-### `/src/fee_collector/`
-This directory contains scripts to interact with FeeCollector, the contract tasked with custody and management of 
-Pangolin's accumulated swap fees. The most commonly done tasks is permissionlessly initiating a PNG buyback to fund 
-the PNG staking program.
+### `/src/bots/`
+This directory contains bots which perform repetitive tasks for Pangolin.
+
+### `/src/DaaS/`
+This directory contains scripts to perform admin tasks for DeFi as a Servie (DaaS).
 
 ### `/src/governance/`
 This directory contains scripts to interact with GovernorAlpha, the primary onchain governance mechanism for Pangolin. 
@@ -53,6 +54,3 @@ of tokenlist updates.
 ### `/python`
 This directory contains all scripts written in python.
 
-### Other
-The vesting bot used by Pangolin also lives here. It ensures that PNG is vested appropriately each day so that PNG 
-farming rewards continue to flow.

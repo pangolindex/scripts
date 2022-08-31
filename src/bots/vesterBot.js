@@ -1,26 +1,56 @@
-// Helper modules to provide common or secret values
-const CONFIG = require('../config/config');
-const ABI = require('../config/abi.json');
-const ADDRESS = require('../config/address.json');
-
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
-web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+const ABI = require('../../config/abi.json');
 
-// Constants
-const ONE_SECOND = web3.utils.toBN(1000);
-const ONE_DAY = ONE_SECOND.muln(86400);
-const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, ADDRESS.PANGOLIN_TREASURY_VESTER);
-const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, ADDRESS.PANGOLIN_TREASURY_VESTER_PROXY);
 
-const main = async () => {
+// Variables
+// --------------------------------------------------
+const RPC = process.env.RPC;
+const WALLET = process.env.WALLET;
+const KEY = process.env.KEY;
+const TREASURY_VESTER = process.env.TREASURY_VESTER;
+const TREASURY_VESTER_PROXY = process.env.TREASURY_VESTER_PROXY;
+// --------------------------------------------------
+if (!RPC) {
+    throw new Error('Invalid RPC');
+}
+if (!Web3.utils.isAddress(WALLET)) {
+    throw new Error('Invalid WALLET');
+}
+if (!KEY) {
+    throw new Error('Invalid KEY');
+}
+if (!Web3.utils.isAddress(TREASURY_VESTER)) {
+    throw new Error('Invalid TREASURY_VESTER');
+}
+if (!Web3.utils.isAddress(TREASURY_VESTER_PROXY)) {
+    throw new Error('Invalid TREASURY_VESTER_PROXY');
+}
+// --------------------------------------------------
+
+
+const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
+web3.eth.accounts.wallet.add(KEY);
+
+main()
+  .then(() => process.exit(0))
+  .catch(error => {
+      console.error(error);
+      process.exit(1);
+  });
+
+async function main() {
+    const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, TREASURY_VESTER);
+    const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, TREASURY_VESTER_PROXY);
+    const SECOND = Web3.utils.toBN(1000);
+    const DAY = Web3.utils.toBN(86400000);
+
     while (true) {
         // Gather info
         const fundsLastAvailableBlockTime = web3.utils.toBN(await treasuryVester.methods.lastUpdate().call());
 
         // Adjust block time to epoch time
         const fundsLastAvailableEpochTime = fundsLastAvailableBlockTime.muln(1000);
-        const fundsNextAvailableEpochTime = fundsLastAvailableEpochTime.add(ONE_DAY).add(ONE_SECOND);
+        const fundsNextAvailableEpochTime = fundsLastAvailableEpochTime.add(DAY).add(SECOND);
 
         console.log(`Detected next available vesting at ${new Date(fundsNextAvailableEpochTime.toNumber()).toLocaleString('en-US')}`);
 
@@ -30,40 +60,34 @@ const main = async () => {
             await sleep(delay);
         }
 
+        let errorCount = 0;
+
         // Claim and distribute funds
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
                 console.log('Calculating parameters for claimAndDistribute() ...');
                 const tx = treasuryVesterProxy.methods.claimAndDistribute();
-                const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+                const gas = await tx.estimateGas({ from: WALLET });
                 const baseGasPrice = await web3.eth.getGasPrice();
 
                 console.log('Sending claimAndDistribute() ...');
                 const receipt = await tx.send({
-                    from: CONFIG.WALLET.ADDRESS,
+                    from: WALLET,
                     gas,
                     maxFeePerGas: baseGasPrice * 2,
                     maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
                 });
-                console.log(`Transaction hash: ${receipt.transactionHash} (${snowtraceLink(receipt.transactionHash)}`);
+                console.log(`Transaction hash: ${receipt.transactionHash}`);
             } catch (error) {
                 console.error(`Error attempting claimAndDistribute()`);
                 console.error(error.message);
-                await sleep(web3.utils.toBN(1000));
+                if (++errorCount >= 5) {
+                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                }
             }
+            await sleep(SECOND.muln(5));
         }
     }
-};
-
-main()
-    .then(() => process.exit(0))
-    .catch(error => {
-        console.error(error);
-        process.exit(1);
-    });
-
-function snowtraceLink(hash) {
-    return `https://snowtrace.io/tx/${hash}`;
 }
 
 function sleep(ms) {
