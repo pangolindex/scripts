@@ -20,9 +20,11 @@ abiDecoder.addABI(destinationABI);
 const decoded = abiDecoder.decodeMethod(bytecode.trim());
 console.dir(decoded, { depth: null });
 
-const deadline = decoded?.params?.filter(param => param.name === 'deadline')[0]?.value;
+const deadline = decoded?.params?.[0]?.value
+  ? Object.entries(decoded?.params[0]?.value).filter(([key, value]) => key === 'deadline')[0]?.[1]
+  : decoded?.params?.filter(param => param.name === 'deadline')[0]?.value;
 if (deadline) {
-    console.log(`Deadline: ${new Date(deadline * 1000).toLocaleString()}`);
+    console.log(`Deadline: ${new Date(Number.parseInt(deadline) * 1000).toLocaleString()}`);
 }
 
 if (!destinationAddress) return;
