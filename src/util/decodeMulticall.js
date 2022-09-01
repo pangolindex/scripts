@@ -33,9 +33,13 @@ const multicalls = [
 const additionalAbis = [
   // [{"inputs":[{"internalType":"address","name":"pair","type":"address"},{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferAndSync","outputs":[],"stateMutability":"nonpayable","type":"function"}],
 ];
+const additionalAddresses = {
+  // FRIENDLY_NAME: '0xADDRESS',
+};
 // --------------------------------------------------
 
 const abiOptions = [].concat(...Object.values(ABI)).concat(...additionalAbis);
+const addressOptions = { ...ADDRESS, ...additionalAddresses };
 const methods = abiOptions
   .filter(entry => entry?.type === 'function')
   .map(entry => ({
@@ -66,7 +70,7 @@ for (const multicall of multicalls) {
     const methodName = methodNames[i];
     const decodedParams = web3.eth.abi.decodeParameters(types[i], methodData);
     const params = Object.entries(decodedParams).filter(([k,v]) => k !== '__length__').map(([k,v]) => v);
-    const addressFriendly = Object.entries(ADDRESS).find(([name, address]) => Helper.isSameAddress(address, multicall.address))?.[0];
+    const addressFriendly = Object.entries(addressOptions).find(([name, address]) => Helper.isSameAddress(address, multicall.address))?.[0];
     if (addressFriendly) {
       multicall.translated = `${addressFriendly}.${methodName}(${params.join(',')})`;
     } else {
