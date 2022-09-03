@@ -41,7 +41,7 @@ main()
 
 async function main() {
     const isProxyEnabled = !!TREASURY_VESTER_PROXY && !Helper.isSameAddress(TREASURY_VESTER_PROXY, '0x0000000000000000000000000000000000000000');
-    const treasuryVester = new web3.eth.Contract(ABI.TREASURY_VESTER, TREASURY_VESTER);
+    const treasuryVester = new web3.eth.Contract(isProxyEnabled ? ABI.TREASURY_VESTER_LEGACY : ABI.TREASURY_VESTER, TREASURY_VESTER);
     const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, TREASURY_VESTER_PROXY);
     const vestContract = isProxyEnabled ? treasuryVesterProxy : treasuryVester;
     const vestMethod = isProxyEnabled ? 'claimAndDistribute' : 'distribute';
