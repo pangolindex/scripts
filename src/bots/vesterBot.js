@@ -10,6 +10,8 @@ const WALLET = process.env.WALLET;
 const KEY = process.env.KEY;
 const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const TREASURY_VESTER_PROXY = process.env.TREASURY_VESTER_PROXY;
+const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
+const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
 // --------------------------------------------------
 if (!RPC) {
     throw new Error('Invalid RPC');
@@ -26,6 +28,12 @@ if (!Web3.utils.isAddress(TREASURY_VESTER)) {
 if (!!TREASURY_VESTER_PROXY && !Web3.utils.isAddress(TREASURY_VESTER_PROXY)) {
     throw new Error('Invalid TREASURY_VESTER_PROXY');
 }
+if (!!EMISSION_DIVERSION && !Web3.utils.isAddress(EMISSION_DIVERSION)) {
+    throw new Error('Invalid EMISSION_DIVERSION');
+}
+if ((!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID) || (!EMISSION_DIVERSION && !!EMISSION_DIVERSION_PID)) {
+    throw new Error('EMISSION_DIVERSION and EMISSION_DIVERSION_PID are jointly required');
+}
 // --------------------------------------------------
 
 
@@ -41,8 +49,10 @@ main()
 
 async function main() {
     const isProxyEnabled = !!TREASURY_VESTER_PROXY && !Helper.isSameAddress(TREASURY_VESTER_PROXY, '0x0000000000000000000000000000000000000000');
+    const isDiversionEnabled = !!EMISSION_DIVERSION && !Helper.isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
     const treasuryVester = new web3.eth.Contract(isProxyEnabled ? ABI.TREASURY_VESTER_LEGACY : ABI.TREASURY_VESTER, TREASURY_VESTER);
     const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, TREASURY_VESTER_PROXY);
+    const emissionDiversion = new web3.eth.Contract(ABI.EMISSION_DIVERSION_FROM_PANGO_CHEF_TO_STAKING_POSITIONS, EMISSION_DIVERSION);
     const vestContract = isProxyEnabled ? treasuryVesterProxy : treasuryVester;
     const vestMethod = isProxyEnabled ? 'claimAndDistribute' : 'distribute';
     const vestArgs = isProxyEnabled ? [] : [];
@@ -82,7 +92,7 @@ async function main() {
                     maxFeePerGas: baseGasPrice * 2,
                     maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
                 });
-                console.log(`Transaction hash: ${receipt.transactionHash}`);
+                console.log(`Vest transaction hash: ${receipt.transactionHash}`);
             } catch (error) {
                 console.error(`Error attempting ${vestMethod}()`);
                 console.error(error.message);
@@ -91,6 +101,27 @@ async function main() {
                 }
             }
             await sleep(SECOND.muln(5));
+        }
+
+        if (isDiversionEnabled) {
+            try {
+                console.log(`Calculating parameters for claimAndAddReward(${EMISSION_DIVERSION_PID}) ...`);
+                const tx = emissionDiversion.methods.claimAndAddReward(EMISSION_DIVERSION_PID);
+                const gas = await tx.estimateGas({ from: WALLET });
+                const baseGasPrice = await web3.eth.getGasPrice();
+
+                console.log(`Sending claimAndAddReward(${EMISSION_DIVERSION_PID}) ...`);
+                const receipt = await tx.send({
+                    from: WALLET,
+                    gas,
+                    maxFeePerGas: baseGasPrice * 2,
+                    maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+                });
+                console.log(`Diversion transaction hash: ${receipt.transactionHash}`);
+            } catch (error) {
+                console.error(`Error attempting claimAndAddReward(${EMISSION_DIVERSION_PID})`);
+                console.error(error.message);
+            }
         }
     }
 }
