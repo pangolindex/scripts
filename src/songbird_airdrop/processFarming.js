@@ -66,6 +66,7 @@ let lastBlockWithData;
     console.log(`Calculating LP value ...`);
     const { reserve0, reserve1 } = await getPairReservesAtBlock(pairAddress, endBlock, blockRange);
     const friendlyFullResults = Object.entries(CACHE)
+      .filter(([owner, amount]) => amount.gtn(0))
       .sort((a, b) => a[1].lt(b[1]) ? 1 : -1)
       .map(([owner, amount]) => ({
           owner,
