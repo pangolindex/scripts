@@ -158,10 +158,12 @@ const PSB_TO_SBG_MULTIPLIER = 2_30;
   // console.log(`Found ${contracts.length} contracts worth ${baseSum.toString() / (10 ** 18)} base`);
 
   const airdropDataPSB = Object.entries(AGGREGATE)
+    .filter(blacklistFilter)
     .map(([address, data]) => ({address, amount: data.mult}))
     .sort((a, b) => a.amount.lt(b.amount) ? 1 : -1)
     .map(({address, amount}) => ({address, amount: amount.toString()}));
   const airdropDataSGB = Object.entries(AGGREGATE)
+    .filter(blacklistFilter)
     .map(([address, data]) => ({address, amount: data.mult.muln(PSB_TO_SBG_MULTIPLIER).divn(MULTIPLIER_DIVIDEND)}))
     .sort((a, b) => a.amount.lt(b.amount) ? 1 : -1)
     .map(({address, amount}) => ({address, amount: amount.toString()}));
