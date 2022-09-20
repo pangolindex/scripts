@@ -9,7 +9,7 @@ in the `config.example.js` file. Copy the example template and rename it to `con
 
 The recommended `config.js` setup will utilize two environment variables 
 `WALLET_ADDRESS` and `WALLET_KEY` by default, but also supports overriding 
-or specifying this information directly in the `config.js` file like so:
+or specifying this information via dotenv or directly in the `config.js` file like so:
 
 1) Replace `process.env.WALLET_ADDRESS` with your wallet address wrapped in quotes
 2) Replace `process.env.WALLET_KEY` with your private key wrapped in quotes

@@ -5,6 +5,6 @@ module.exports = {
         KEY: process.env.WALLET_KEY
     },
 
-    RPC: 'https://api.avax.network/ext/bc/C/rpc',
+    RPC: process.env.RPC ?? 'https://api.avax.network/ext/bc/C/rpc',
 
 };

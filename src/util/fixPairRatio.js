@@ -1,6 +1,6 @@
+const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
-const CONFIG = require('../../config/config');
 const Conversion = require('../core/conversion');
 const Helpers = require('../core/helpers');
 const Web3 = require('web3');

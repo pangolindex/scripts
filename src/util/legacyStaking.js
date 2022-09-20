@@ -1,8 +1,7 @@
-const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const Helpers = require('../core/helpers');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
+const web3 = new Web3(new Web3.providers.HttpProvider('https://api.avax.network/ext/bc/C/rpc'));
 
 
 // Change These Variables
