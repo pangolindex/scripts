@@ -3,9 +3,10 @@ const ABI = require('../../config/abi.json');
 
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
-web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
 
 const propose = async ({ multisigAddress, destination, value, bytecode, nonce }) => {
+    web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+
     const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
 
     const tx = multisigContract.methods.submitTransaction(destination, value, bytecode);
@@ -27,6 +28,8 @@ const propose = async ({ multisigAddress, destination, value, bytecode, nonce })
 };
 
 const confirm = async ({ multisigAddress, id, includeExtraGas, nonce }) => {
+    web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+
     const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
 
     const { executed } = await multisigContract.methods.transactions(id).call();
@@ -61,7 +64,19 @@ const confirm = async ({ multisigAddress, id, includeExtraGas, nonce }) => {
     return tx.send(txConfig);
 };
 
+const verify = async ({ multisigAddress, id }) => {
+    const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
+
+    const { destination, value, data, executed } = await multisigContract.methods.transactions(id).call();
+    const confirmations = await multisigContract.methods.getConfirmations(id).call();
+    const required = await multisigContract.methods.required().call();
+
+    return { destination, value, data, executed, confirmations, required };
+};
+
 const execute = async ({ multisigAddress, id, nonce }) => {
+    web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+
     const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
 
     const { executed } = await multisigContract.methods.transactions(id).call();
@@ -92,5 +107,6 @@ const execute = async ({ multisigAddress, id, nonce }) => {
 module.exports = {
     propose,
     confirm,
+    verify,
     execute,
 };
