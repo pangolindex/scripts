@@ -71,7 +71,13 @@ const verify = async ({ multisigAddress, id }) => {
     const confirmations = await multisigContract.methods.getConfirmations(id).call();
     const required = await multisigContract.methods.required().call();
 
-    return { destination, value, data, executed, confirmations, required };
+    const executionTx = multisigContract.methods.executeTransaction(id);
+    let gasEstimate;
+    try {
+        gasEstimate = await executionTx.estimateGas({ from: CONFIG.WALLET.ADDRESS, value });
+    } catch(e) {}
+
+    return { destination, value, data, executed, confirmations, required, gasEstimate };
 };
 
 const execute = async ({ multisigAddress, id, nonce }) => {
