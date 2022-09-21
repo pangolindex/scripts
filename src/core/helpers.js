@@ -27,16 +27,33 @@ const Helpers = {
         return Helpers.token0Cache[address] = await contract.methods.token0().call();
     },
 
+    getToken0SymbolCached: async (address) => {
+        const token0Address = await Helpers.getToken0Cached(address);
+        return await Helpers.getSymbolCached(token0Address);
+    },
+
     getToken1Cached: async (address) => {
         if (Helpers.token1Cache[address]) return Helpers.token1Cache[address];
         const contract = new web3.eth.Contract(ABI.PAIR, address);
         return Helpers.token1Cache[address] = await contract.methods.token1().call();
     },
 
-    getTokensCached: async (address) => {
+    getToken1SymbolCached: async (address) => {
+        const token1Address = await Helpers.getToken1Cached(address);
+        return await Helpers.getSymbolCached(token1Address);
+    },
+
+    getPairTokensCached: async (address) => {
         return await Promise.all([
             Helpers.getToken0Cached(address),
             Helpers.getToken1Cached(address),
+        ]);
+    },
+
+    getPairTokenSymbolsCached: async (address) => {
+        return await Promise.all([
+            Helpers.getToken0SymbolCached(address),
+            Helpers.getToken1SymbolCached(address),
         ]);
     },
 
@@ -88,6 +105,12 @@ const Helpers = {
     isSameAddress(a, b) {
         if (!a || !b) return false;
         return a.toLowerCase() === b.toLowerCase();
+    },
+
+    createArrayOfNumbers(a, b) {
+        const arr = [];
+        for (let i = a; i <= b; i++) arr.push(i);
+        return arr;
     },
 };
 
