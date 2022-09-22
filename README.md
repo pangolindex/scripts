@@ -41,6 +41,11 @@ This directory contains scripts to interact with different versions of DAOs comm
 wallets. Support is included for interacting with the gnosis multisig and gnosis safe. Notable functionality includes 
 submitting transactions, confirming transactions, and executing transactions.
 
+### `/src/pangochef/`
+This directory contains scripts to interact with PangoChef, the contract driving Pangolin's primary system of
+incentivizing liquidity providers aka "farming." Notable functionality includes an overview of all the pools,
+initializing pools, changing weights, and modifying rewarders.
+
 ### `/src/single_side_staking/`
 This directory contains scripts to interact with single side staking contracts. These are the contracts that power 
 Pangolin's PNG staking programs. Support is included for different tasks to be done via a multisig or EOA. Notable 

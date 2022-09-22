@@ -3,6 +3,12 @@ const constants = {
     GNOSIS_SAFE: 'GNOSIS_SAFE',
     EOA: 'EOA',
 
+    PoolType: {
+        UNSET_POOL: 0,
+        ERC20_POOL: 1,
+        RELAYER_POOL: 2,
+    },
+
     MAX_UINT256: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
 
     SECOND: 1000,
