@@ -2,6 +2,7 @@
 const CONFIG = require('../../config/config');
 const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
+const Helper = require('../core/helpers');
 const { execute: gnosisMultisigExecute } = require('../core/gnosisMultisig');
 const { execute: gnosisSafeExecute } = require('../core/gnosisSafe');
 
@@ -18,7 +19,7 @@ const IDs = [
     '0xce926df4c5622dbb4beaaefb47dd82c659e241dbc11f1bf5c2f2f754204571ee',
 ];
 // Note: Gnosis Multisig: IDs will be transaction ids
-// const IDs = createArrayOfNumbers(1, 1); // Note: Range is inclusive
+// const IDs = Helper.createArrayOfNumbers(1, 1); // Note: Range is inclusive
 
 const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
@@ -80,9 +81,3 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
         console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
         process.exit(0);
     });
-
-function createArrayOfNumbers(a, b) {
-    const arr = [];
-    for (let i = a; i <= b; i++) arr.push(i);
-    return arr;
-}
