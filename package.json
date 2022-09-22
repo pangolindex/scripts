@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "fork": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc"
+    "forkAvalanche": "npx hardhat node --fork https://api.avax.network/ext/bc/C/rpc",
+    "forkSongbird": "npx hardhat node --fork https://songbird-api.flare.network/ext/C/rpc"
   },
   "repository": {
     "type": "git",
