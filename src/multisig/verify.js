@@ -16,6 +16,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 const IDs = Helper.createArrayOfNumbers(0, 1); // Note: Range is inclusive
 const multisigAddress = ADDRESS.SONGBIRD_GNOSIS_MULTISIG_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const showRawOverview = true;
 const showConfirmingAddresses = true;
 
 const additionalAbis = [
@@ -63,6 +64,13 @@ const additionalAddresses = {
 
                 if (i >= 0) {
                     const decodedParams = web3.eth.abi.decodeParameters(methods[i].types, methodData);
+                    delete decodedParams.__length__;
+                    const paramsRaw = Object.values(decodedParams).map(param => {
+                        if (Array.isArray(param)) {
+                            return `[${param.join(',')}]`;
+                        }
+                        return param;
+                    });
                     const paramsFriendly = Object.values(decodedParams).map(param => {
                         if (Web3.utils.isAddress(param)) {
                             return getFriendlyAddress(param, addressOptions);
@@ -73,7 +81,8 @@ const additionalAddresses = {
                         return param;
                     });
                     const addressFriendly = getFriendlyAddress(destination, addressOptions);
-                    const translated = `${addressFriendly}.${methods[i].name}${value > 0 ? '{ value: '+value+' }' : ''}(${paramsFriendly.join(', ')})`;
+                    const txFriendly = `${addressFriendly}.${methods[i].name}${value > 0 ? '{ value: '+value+' }' : ''}(${paramsFriendly.join(', ')})`;
+                    const txRaw = `${destination}.${methods[i].name}${value > 0 ? '{ value: '+value+' }' : ''}(${paramsRaw.join(', ')})`;
 
                     const confirmationsString = confirmations.length >= required
                         ? chalk.green(`${confirmations.length}/${required}`)
@@ -81,14 +90,16 @@ const additionalAddresses = {
                     const friendlyColoredConfirmations = confirmations.map(confirmation => getFriendlyColoredConfirmation(confirmation, addressOptions));
 
                     console.log(`Transaction ${id}`);
-                    console.log(translated);
+                    console.log(`Friendly:      ${txFriendly}`);
+                    if (showRawOverview) console.log(`Raw:           ${txRaw}`);
                     console.log(`Confirmations: ${confirmationsString} ${showConfirmingAddresses ? `[${friendlyColoredConfirmations}]` : ``}`);
-                    console.log(`Executed: ${executed ? chalk.green(executed) : chalk.yellow(executed)}`);
+                    console.log(`Executed:      ${executed ? chalk.green(executed) : chalk.yellow(executed)}`);
                     if (confirmations.length >= required && !executed) {
                         console.log(`Execution gas estimation: ${gasEstimate ?? 'ERROR'}`);
                     }
                 } else {
-                    console.error(`ERROR decoding transaction ${id}`);
+                    console.error(`Error decoding transaction ${id}`);
+                    console.error(`${destination}.${methodSignature}${value > 0 ? '{ value: '+value+' }' : ''}(?)`);
                 }
 
                 break;
