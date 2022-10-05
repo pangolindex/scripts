@@ -5,12 +5,10 @@ const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
-
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 // Change These Variables
 // --------------------------------------------------
@@ -25,8 +23,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 
 
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
     for (const tokenAddress of tokenAddresses) {
         const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
         const [balance, allowance] = await Promise.all([
@@ -49,6 +45,8 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                         bytecode,
                         nonce,
                     });
+
+                    gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
                     if (!receipt?.status) {
                         console.log(receipt);
@@ -74,7 +72,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

@@ -1,25 +1,21 @@
 // Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
 const StakingConfig = require('./stakingConfig');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
-
+const StakingRewards = require('@pangolindex/exchange-contracts/artifacts/contracts/staking-rewards/StakingRewards.sol/StakingRewards.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 /*
  * Transfer ownership of the staking contract to the multisig. Must be sent from an end user wallet
  */
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    const stakingRewardsContract = new web3.eth.Contract(StakingRewards.abi, StakingConfig.STAKING_CONTRACT);
 
-    const stakingContract = new web3.eth.Contract(ABI.STAKING_REWARDS, StakingConfig.STAKING_CONTRACT);
-
-    const tx = stakingContract.methods.transferOwnership(
+    const tx = stakingRewardsContract.methods.transferOwnership(
         ADDRESS.PANGOLIN_MULTISIG_ADDRESS,
     );
 
@@ -35,6 +31,8 @@ let endingAvax;
         maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     });
 
+    gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+
     if (!receipt?.status) {
         console.log(receipt);
         process.exit(1);
@@ -45,7 +43,6 @@ let endingAvax;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

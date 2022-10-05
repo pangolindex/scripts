@@ -4,19 +4,21 @@ const ABI = require('../../config/abi.json');
 const BYTECODE = require('../../config/bytecode.json');
 const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
+const RewarderViaMultiplier = require('@pangolindex/exchange-contracts/artifacts/contracts/mini-chef/RewarderViaMultiplier.sol/RewarderViaMultiplier.json');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
+const Helpers = require('../core/helpers');
 const conversion = require('../core/conversion');
 
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 // Change These Variables
 // --------------------------------------------------
+const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 const multisigAddress = ADDRESS.PANGOLIN_SUPER_FARM_GNOSIS_SAFE_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_SAFE;
 const rewarders = [
@@ -34,9 +36,11 @@ const rewarders = [
  */
 verifyRewardersSyntax(rewarders);
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
-    const rewarderViaMultiplierContract = new web3.eth.Contract(ABI.REWARDER_VIA_MULTIPLIER);
+    const rewarderViaMultiplierContract = new web3.eth.Contract(
+        RewarderViaMultiplier.abi,
+        undefined,
+        { data: BYTECODE.REWARDER_VIA_MULTIPLIER }, // Using this instead of `RewarderViaMultiplier.bytecode` to include 2000 optimization runs
+    );
 
     for (const rewarder of rewarders) {
         ////////////////////////////////////////
@@ -74,15 +78,14 @@ verifyRewardersSyntax(rewarders);
         })));
 
         console.log(`Pausing for 15 seconds ...`);
-        await new Promise(resolve => setTimeout(resolve, 15 * 1000));
+        await Helpers.sleep(15 * 1000);
 
         const deployTx = rewarderViaMultiplierContract.deploy({
-            data: BYTECODE.REWARDER_VIA_MULTIPLIER,
             arguments: [
                 rewardAddressArguments,
                 rewardMultiplierArguments,
                 18,
-                ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS,
+                miniChefAddress,
             ],
         });
 
@@ -91,12 +94,18 @@ verifyRewardersSyntax(rewarders);
 
         console.log(`Deploying rewarder with ${rewardAddressArguments.length} additional rewards (${rewardSymbols.join(',')}) ...`)
 
-        const { _address: rewarderAddress } = await deployTx.send({
-            from: CONFIG.WALLET.ADDRESS,
-            gas,
-            maxFeePerGas: baseGasPrice * 2,
-            maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+        const { contractAddress: rewarderAddress, ...receipt } = await new Promise((resolve, reject) => {
+            deployTx.send({
+                from: CONFIG.WALLET.ADDRESS,
+                gas,
+                maxFeePerGas: baseGasPrice * 2,
+                maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+            })
+                .once('receipt', resolve)
+                .once('error', reject);
         });
+
+        gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
         console.log(`Deployed rewarder at ${rewarderAddress}`);
 
@@ -109,6 +118,13 @@ verifyRewardersSyntax(rewarders);
             if (parseInt(rewardFundingAmounts[i]) === 0) continue;
 
             const rewardContract = new web3.eth.Contract(ABI.TOKEN, reward.rewardAddress.toLowerCase());
+
+            const currentRewardBalance = await rewardContract.methods.balanceOf(multisigAddress).call().then(web3.utils.toBN);
+            if (currentRewardBalance.lt(web3.utils.toBN(rewardFundingAmounts[i]))) {
+                console.log(`Insufficient ${rewardSymbols[i]} balance for funding!`);
+                console.log(`Will propose funding tx anyway in 10 seconds ...`);
+                await Helpers.sleep(10 * 1000);
+            }
 
             const fundingTx = rewardContract.methods.transfer(
                 rewarderAddress,
@@ -125,6 +141,8 @@ verifyRewardersSyntax(rewarders);
                         value: 0,
                         bytecode: fundingTx.encodeABI(),
                     });
+
+                    gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
                     if (!receipt?.status) {
                         console.log(receipt);
@@ -150,8 +168,7 @@ verifyRewardersSyntax(rewarders);
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });
 

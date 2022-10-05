@@ -1,19 +1,18 @@
 // Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
+const MiniChefV2 = require('@pangolindex/exchange-contracts/artifacts/contracts/mini-chef/MiniChefV2.sol/MiniChefV2.json');
+const PangolinPair = require('@pangolindex/exchange-contracts/artifacts/contracts/pangolin-core/PangolinPair.sol/PangolinPair.json');
 const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 const helpers = require('../core/helpers');
-
 const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 // Change These Variables
 // --------------------------------------------------
@@ -43,9 +42,7 @@ const overwriteStatuses = farms.map(farm => farm.overwrite ?? false);
  */
 verifyFarmsSyntax(farms);
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
-    const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, miniChefAddress);
+    const miniChefContract = new web3.eth.Contract(MiniChefV2.abi, miniChefAddress.toLowerCase());
 
     if (showOverview) {
         const [ lpTokens, poolInfos ] = await Promise.all([
@@ -56,7 +53,7 @@ verifyFarmsSyntax(farms);
         const farmInfo = await Promise.all(lpTokens.map(async (pglAddress, i) => {
             if (!farms.some(farm => farm.pid === i)) return {};
 
-            const pglContract = new web3.eth.Contract(ABI.PAIR, pglAddress);
+            const pglContract = new web3.eth.Contract(PangolinPair.abi, pglAddress);
             const [token0Symbol, token1Symbol] = await Promise.all([
                 pglContract.methods.token0().call().then(helpers.getSymbolCached),
                 pglContract.methods.token1().call().then(helpers.getSymbolCached),
@@ -122,6 +119,8 @@ verifyFarmsSyntax(farms);
                 bytecode,
             });
 
+            gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+
             if (!receipt?.status) {
                 console.log(receipt);
                 process.exit(1);
@@ -143,8 +142,7 @@ verifyFarmsSyntax(farms);
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });
 
