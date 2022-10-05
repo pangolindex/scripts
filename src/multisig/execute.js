@@ -5,11 +5,9 @@ const CONSTANTS = require('../core/constants');
 const Helper = require('../core/helpers');
 const { execute: gnosisMultisigExecute } = require('../core/gnosisMultisig');
 const { execute: gnosisSafeExecute } = require('../core/gnosisSafe');
-
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 // Change These Variables
@@ -30,8 +28,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
  * This is an example of executing a set of multisig transactions that have been sufficiently confirmed
  */
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
     for (const id of IDs) {
         let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
         let receipt;
@@ -45,6 +41,8 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                 });
 
                 if (!receipt) continue;
+
+                gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
                 if (!receipt?.status) {
                     console.log(receipt);
@@ -62,6 +60,8 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 
                 if (!receipt) continue;
 
+                gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+
                 if (!receipt?.status) {
                     console.log(receipt);
                     process.exit(1);
@@ -77,7 +77,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

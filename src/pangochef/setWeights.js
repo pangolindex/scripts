@@ -1,11 +1,10 @@
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
+const PangoChef = require('@pangolindex/exchange-contracts/artifacts/contracts/staking-positions/PangoChef.sol/PangoChef.json');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 const Helpers = require('../core/helpers');
-
 const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
@@ -33,7 +32,7 @@ const pools = [
  */
 verifyPoolsSyntax(pools);
 (async () => {
-    const pangoChefContract = new web3.eth.Contract(ABI.PANGO_CHEF, pangoChefAddress);
+    const pangoChefContract = new web3.eth.Contract(PangoChef.abi, pangoChefAddress.toLowerCase());
 
     const poolIds = pools.map(({pid}) => pid);
     const weights = pools.map(({weight}) => weight);

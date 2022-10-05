@@ -5,7 +5,6 @@ const ABI = require('../../config/abi.json');
 const CONSTANTS = require('../core/constants');
 const Helper = require('../core/helpers');
 const { verify: gnosisMultisigVerify } = require('../core/gnosisMultisig');
-
 const chalk = require('chalk');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));

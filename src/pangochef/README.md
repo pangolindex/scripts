@@ -8,6 +8,9 @@ Initialize pool by providing recipient address and pool type. Configuration is d
 ### `overview.js`
 Lists information about all pools in PangoChef including the pool recipient, weight, tokens, and rewarder.
 
+### `deployRewarders.js`
+Deploys rewarders to later be whitelisted with pools via `setRewarders.js`. This must be done first.
+
 ### `setRewarders.js`
 Modify pool rewarders. Can add/modify a rewarder by providing the address, and remove a rewarder by
 providing the 0x0 address.

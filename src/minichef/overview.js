@@ -1,11 +1,17 @@
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
+const MiniChefV2 = require('@pangolindex/exchange-contracts/artifacts/contracts/mini-chef/MiniChefV2.sol/MiniChefV2.json');
+const PangolinPair = require('@pangolindex/exchange-contracts/artifacts/contracts/pangolin-core/PangolinPair.sol/PangolinPair.json');
 const ADDRESS = require('../../config/address.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 const helpers = require('../core/helpers');
 
+
+// Change These Variables
+// --------------------------------------------------
+const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 const chunkSize = 10;
+// --------------------------------------------------
 
 /*
  * Lists information about all pools in MiniChefV2
@@ -15,7 +21,7 @@ const chunkSize = 10;
 
     let totalAllocPoints = 0;
     const table = [];
-    const miniChefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS);
+    const miniChefContract = new web3.eth.Contract(MiniChefV2.abi, miniChefAddress.toLowerCase());
 
     const [ lpTokens, poolInfos ] = await Promise.all([
         miniChefContract.methods.lpTokens().call(),
@@ -33,7 +39,7 @@ const chunkSize = 10;
 
 
     async function lookup([pid, pgl]) {
-        const pglContract = new web3.eth.Contract(ABI.PAIR, pgl);
+        const pglContract = new web3.eth.Contract(PangolinPair.abi, pgl);
         const [token0Symbol, token1Symbol, rewarder] = await Promise.all([
             pglContract.methods.token0().call().then(helpers.getSymbolCached),
             pglContract.methods.token1().call().then(helpers.getSymbolCached),

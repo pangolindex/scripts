@@ -1,12 +1,13 @@
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
+const MiniChefV2 = require('@pangolindex/exchange-contracts/artifacts/contracts/mini-chef/MiniChefV2.sol/MiniChefV2.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 
 // Change these variables
 // -----------------------------------------------------------------
 const pid = 75; // PID of the farm in MiniChef
+const miniChefAddress = ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS;
 
 const startBlock = 10396912; // Block before the PGL (use PGL creation block for simplicity)
 const blockRange = 2048; // Number of block events to fetch per batch
@@ -18,7 +19,7 @@ const usersWithPending = new Set();
 const blockRanges = [];
 let processedRangeCount = 0;
 let processedUserCount = 0;
-const chefContract = new web3.eth.Contract(ABI.MINICHEF_V2, ADDRESS.PANGOLIN_MINICHEF_V2_ADDRESS);
+const chefContract = new web3.eth.Contract(MiniChefV2.abi, miniChefAddress.toLowerCase());
 
 (async () => {
   const poolCount = parseInt(await chefContract.methods.poolLength().call());

@@ -1,27 +1,23 @@
 // Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
 const CONSTANTS = require('../core/constants');
-const ABI = require('../../config/abi.json');
 const StakingConfig = require('./stakingConfig');
+const StakingRewards = require('@pangolindex/exchange-contracts/artifacts/contracts/staking-rewards/StakingRewards.sol/StakingRewards.json');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
-
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 /*
  * Sets the duration of the staking contract
  */
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    const stakingRewardsContract = new web3.eth.Contract(StakingRewards.abi, StakingConfig.STAKING_CONTRACT);
 
-    const stakingContract = new web3.eth.Contract(ABI.STAKING_REWARDS, StakingConfig.STAKING_CONTRACT);
-
-    const tx = stakingContract.methods.setRewardsDuration(
+    const tx = stakingRewardsContract.methods.setRewardsDuration(
         StakingConfig.DURATION,
     );
 
@@ -33,6 +29,8 @@ let endingAvax;
                 value: 0,
                 bytecode: tx.encodeABI(),
             });
+
+            gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
             if (!receipt?.status) {
                 console.log(receipt);
@@ -55,7 +53,6 @@ let endingAvax;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

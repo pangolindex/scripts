@@ -6,14 +6,12 @@ const CONSTANTS = require('../core/constants');
 const Conversion = require('../core/conversion');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
-
 const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 // Change These Variables
 // --------------------------------------------------
@@ -30,8 +28,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
  * This is an example of transferring an ERC20 token from the multisig
  */
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
     const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
 
     const decimals = parseInt(await tokenContract.methods.decimals().call());
@@ -59,6 +55,8 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                 bytecode,
             });
 
+            gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+
             if (!receipt?.status) {
                 console.log(receipt);
                 process.exit(1);
@@ -80,7 +78,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

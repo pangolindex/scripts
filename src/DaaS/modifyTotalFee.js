@@ -1,29 +1,25 @@
 // Helper modules to provide common or secret values
 const CONFIG = require('../../config/config');
 const ADDRESS = require('../../config/address.json');
-const ABI = require('../../config/abi.json');
-
+const PangolinRouterSupportingFees = require('@pangolindex/exchange-contracts/artifacts/contracts/pangolin-periphery/PangolinRouterSupportingFees.sol/PangolinRouterSupportingFees.json');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 // Change These Variables
 // --------------------------------------------------
 const partner = '0x0000000000000000000000000000000000000000';
 const feeTotal = 100;
-const router = ADDRESS.DAAS_ROUTER_MAINNET;
+const routerAddress = ADDRESS.DAAS_ROUTER_MAINNET;
 // --------------------------------------------------
 
 
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
+    const routerSupportingFeesContract = new web3.eth.Contract(PangolinRouterSupportingFees.abi, routerAddress.toLowerCase());
 
-    const routerDaaS = new web3.eth.Contract(ABI.ROUTER_DAAS, router);
-
-    const tx = routerDaaS.methods.modifyTotalFee(partner, feeTotal.toString());
+    const tx = routerSupportingFeesContract.methods.modifyTotalFee(partner, feeTotal.toString());
 
     const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
     const baseGasPrice = await web3.eth.getGasPrice();
@@ -36,6 +32,8 @@ const router = ADDRESS.DAAS_ROUTER_MAINNET;
         maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
     });
 
+    gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+
     if (!receipt?.status) {
         console.log(receipt);
         process.exit(1);
@@ -45,7 +43,6 @@ const router = ADDRESS.DAAS_ROUTER_MAINNET;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });

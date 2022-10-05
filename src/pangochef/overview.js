@@ -1,9 +1,10 @@
 const CONFIG = require('../../config/config');
-const ABI = require('../../config/abi.json');
 const ADDRESS = require('../../config/address.json');
+const PangoChef = require('@pangolindex/exchange-contracts/artifacts/contracts/staking-positions/PangoChef.sol/PangoChef.json');
 const Helpers = require('../core/helpers');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
+
 
 // Change These Variables
 // --------------------------------------------------
@@ -16,7 +17,7 @@ const pangoChefAddress = ADDRESS.SONGBIRD_PANGO_CHEF;
 (async () => {
     const start = Date.now();
 
-    const pangoChefContract = new web3.eth.Contract(ABI.PANGO_CHEF, pangoChefAddress.toLowerCase());
+    const pangoChefContract = new web3.eth.Contract(PangoChef.abi, pangoChefAddress.toLowerCase());
 
     const poolCount = parseInt(await pangoChefContract.methods.poolsLength().call());
     const poolIds = Helpers.createArrayOfNumbers(0, poolCount - 1);

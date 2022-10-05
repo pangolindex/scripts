@@ -14,12 +14,12 @@ module.exports = {
         fuji: {
             chainId: 43113,
             url: 'https://api.avax-test.network/ext/bc/C/rpc',
-            account: !!CONFIG.WALLET.KEY ? [CONFIG.WALLET.KEY] : undefined,
+            accounts: !!CONFIG.WALLET.KEY ? [CONFIG.WALLET.KEY] : undefined,
         },
         mainnet: {
             chainId: 43114,
             url: 'https://api.avax.network/ext/bc/C/rpc',
-            account: !!CONFIG.WALLET.KEY ? [CONFIG.WALLET.KEY] : undefined,
+            accounts: !!CONFIG.WALLET.KEY ? [CONFIG.WALLET.KEY] : undefined,
         },
     },
 };

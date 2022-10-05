@@ -5,20 +5,16 @@ const ABI = require('../../config/abi.json');
 const StakingConfig = require('./stakingConfig');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
-
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
-let startingAvax;
-let endingAvax;
+let gasSpent = web3.utils.toBN(0);
 
 
 /*
  * Sends funds from the multisig to the staking contract
  */
 (async () => {
-    startingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-
     const rewardTokenContract = new web3.eth.Contract(ABI.TOKEN, StakingConfig.REWARD_ADDRESS);
 
     const tx = rewardTokenContract.methods.transfer(
@@ -34,6 +30,8 @@ let endingAvax;
                 value: 0,
                 bytecode: tx.encodeABI(),
             });
+
+            gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
             if (!receipt?.status) {
                 console.log(receipt);
@@ -56,7 +54,6 @@ let endingAvax;
 })()
     .catch(console.error)
     .finally(async () => {
-        endingAvax = await web3.eth.getBalance(CONFIG.WALLET.ADDRESS);
-        console.log(`AVAX spent: ${(startingAvax - endingAvax) / (10 ** 18)}`);
+        console.log(`Gas spent: ${gasSpent / (10 ** 18)}`);
         process.exit(0);
     });
