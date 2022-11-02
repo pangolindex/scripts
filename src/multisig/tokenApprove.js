@@ -23,6 +23,8 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
 
 
 (async () => {
+    let nonce = await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending');
+
     for (const tokenAddress of tokenAddresses) {
         const tokenContract = new web3.eth.Contract(ABI.TOKEN, tokenAddress);
         const [balance, allowance] = await Promise.all([
@@ -30,7 +32,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
             tokenContract.methods.allowance(multisigAddress, spender).call().then(web3.utils.toBN),
         ]);
         if (balance.gt(allowance)) {
-            const nonce = await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending');
             const tx = tokenContract.methods.approve(spender, allowanceAmount);
             const bytecode = tx.encodeABI();
 
@@ -45,6 +46,9 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                         bytecode,
                         nonce,
                     });
+
+                    if (!receipt) continue;
+                    nonce++;
 
                     gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
@@ -61,7 +65,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                         destination: tokenAddress,
                         value: 0,
                         bytecode,
-                        nonce,
                     });
                     break;
                 default:

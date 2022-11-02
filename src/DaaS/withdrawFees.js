@@ -22,8 +22,8 @@ const tokenAddresses = [
     '0x0000000000000000000000000000000000000000',
 ];
 const routerSupportingFeesAddress = ADDRESS.DAAS_ROUTER_MAINNET;
-const multisigAddress = ADDRESS.SONGBIRD_GNOSIS_MULTISIG_ADDRESS;
-const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_SAFE;
 const recipientAddress = multisigAddress;
 const bytecodeOnly = false;
 // --------------------------------------------------
