@@ -28,8 +28,9 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
  * This is an example of executing a set of multisig transactions that have been sufficiently confirmed
  */
 (async () => {
+    let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
+
     for (const id of IDs) {
-        let nonce = parseInt(await web3.eth.getTransactionCount(CONFIG.WALLET.ADDRESS, 'pending'));
         let receipt;
 
         switch (multisigType) {
@@ -41,6 +42,7 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                 });
 
                 if (!receipt) continue;
+                nonce++;
 
                 gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
 
@@ -48,7 +50,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                     console.log(receipt);
                     process.exit(1);
                 } else {
-                    nonce++;
                     console.log(`Transaction hash: ${receipt.transactionHash}`);
                 }
                 break;
@@ -66,7 +67,6 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
                     console.log(receipt);
                     process.exit(1);
                 } else {
-                    nonce++;
                     console.log(`Transaction hash: ${receipt.transactionHash}`);
                 }
                 break;
