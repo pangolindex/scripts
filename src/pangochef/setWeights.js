@@ -5,8 +5,8 @@ const PangoChef = require('@pangolindex/exchange-contracts/artifacts/contracts/s
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
 const Helpers = require('../core/helpers');
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 let gasSpent = web3.utils.toBN(0);
@@ -47,7 +47,11 @@ verifyPoolsSyntax(pools);
         );
 
         const recipientSymbols = await Promise.all(
-            poolInfos.map(({tokenOrRecipient}) => Helpers.getPairTokenSymbolsCached(tokenOrRecipient))
+            poolInfos.map(({poolType, tokenOrRecipient}) =>
+                parseInt(poolType) === CONSTANTS.PoolType.ERC20_POOL
+                    ? Helpers.getPairTokenSymbolsCached(tokenOrRecipient)
+                    : undefined
+            )
         );
 
         let netWeightDelta = 0;
@@ -57,7 +61,7 @@ verifyPoolsSyntax(pools);
             netWeightDelta += weightDelta;
             return {
                 pid: pid,
-                'Pool': `${recipientSymbols[i][0]}-${recipientSymbols[i][1]}`,
+                'Pool': parseInt(poolInfos[i].poolType) === CONSTANTS.PoolType.ERC20_POOL ? `${recipientSymbols[i][0]}-${recipientSymbols[i][1]}` : 'RELAYER',
                 'Old Weight': parseInt(poolRewardInfos[i].weight),
                 'New Weight': weight,
                 'Delta Weight': weightDelta,
