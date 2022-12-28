@@ -1,6 +1,6 @@
 const axios = require('axios');
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const Web3 = require('web3');
 const ABI = require('../../config/abi.json');
 
@@ -19,6 +19,8 @@ const SLIPPAGE_BIPS = Number.parseInt(process.env.SLIPPAGE_BIPS);
 const MAX_GAS = Number.parseInt(process.env.MAX_GAS);
 const INTERVAL = Number.parseInt(process.env.INTERVAL);
 const INTERVAL_WINDOW = Number.parseInt(process.env.INTERVAL_WINDOW);
+const TX_MAX_FEE = process.env.TX_MAX_FEE;
+const TX_MAX_PRIORITY_FEE = process.env.TX_MAX_PRIORITY_FEE;
 // --------------------------------------------------
 if (!RPC) {
     throw new Error('Invalid RPC');
@@ -198,8 +200,8 @@ async function harvest() {
     receipt = await tx.send({
         from: WALLET,
         gas: gas,
-        maxFeePerGas: baseGasPrice * 2,
-        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+        maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
+        maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
     });
 
     if (!receipt?.status) {

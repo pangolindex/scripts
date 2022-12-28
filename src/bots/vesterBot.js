@@ -12,6 +12,8 @@ const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const TREASURY_VESTER_PROXY = process.env.TREASURY_VESTER_PROXY;
 const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
+const TX_MAX_FEE = process.env.TX_MAX_FEE;
+const TX_MAX_PRIORITY_FEE = process.env.TX_MAX_PRIORITY_FEE;
 // --------------------------------------------------
 if (!RPC) {
     throw new Error('Invalid RPC');
@@ -89,8 +91,8 @@ async function main() {
                 const receipt = await tx.send({
                     from: WALLET,
                     gas,
-                    maxFeePerGas: baseGasPrice * 2,
-                    maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+                    maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
+                    maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
                 });
                 console.log(`Vest transaction hash: ${receipt.transactionHash}`);
             } catch (error) {
@@ -114,8 +116,8 @@ async function main() {
                 const receipt = await tx.send({
                     from: WALLET,
                     gas,
-                    maxFeePerGas: baseGasPrice * 2,
-                    maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+                    maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
+                    maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
                 });
                 console.log(`Diversion transaction hash: ${receipt.transactionHash}`);
             } catch (error) {
