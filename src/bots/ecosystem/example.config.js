@@ -35,7 +35,7 @@ const config = [
 
 
 // Post-processing to provide uniqueness
-const path = require('path');
+const path = require('node:path');
 const ECOSYSTEM = path.basename(__filename, '.config.js');
 const apps = config.map(app => ({
   ...app,

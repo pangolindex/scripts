@@ -37,5 +37,5 @@ pm2 start ecosystem/avalanche.config.js --only "avalanche/vester"
 
 ### Viewing Bot Logs
 ```bash
-pm2 logs -f vester
+pm2 logs -f avalanche
 ```
