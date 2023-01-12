@@ -51,7 +51,9 @@ const additionalAddresses = {
                     id,
                 });
 
-                if (!data) {
+                if (data) {
+                    console.log(`Transaction ${id}`);
+                } else {
                     console.error(`Invalid transaction ${id}`);
                     continue;
                 }
@@ -83,22 +85,22 @@ const additionalAddresses = {
                     const txFriendly = `${addressFriendly}.${methods[i].name}${value > 0 ? '{ value: '+value+' }' : ''}(${paramsFriendly.join(', ')})`;
                     const txRaw = `${destination}.${methods[i].name}${value > 0 ? '{ value: '+value+' }' : ''}(${paramsRaw.join(', ')})`;
 
-                    const confirmationsString = confirmations.length >= required
-                        ? chalk.green(`${confirmations.length}/${required}`)
-                        : chalk.yellow(`${confirmations.length}/${required}`);
-                    const friendlyColoredConfirmations = confirmations.map(confirmation => getFriendlyColoredConfirmation(confirmation, addressOptions));
-
-                    console.log(`Transaction ${id}`);
                     console.log(`Friendly:      ${txFriendly}`);
                     if (showRawOverview) console.log(`Raw:           ${txRaw}`);
-                    console.log(`Confirmations: ${confirmationsString} ${showConfirmingAddresses ? `[${friendlyColoredConfirmations}]` : ``}`);
-                    console.log(`Executed:      ${executed ? chalk.green(executed) : chalk.yellow(executed)}`);
-                    if (confirmations.length >= required && !executed) {
-                        console.log(`Execution gas estimation: ${gasEstimate ?? 'ERROR'}`);
-                    }
                 } else {
-                    console.error(`Error decoding transaction ${id}`);
-                    console.error(`${destination}.${methodSignature}${value > 0 ? '{ value: '+value+' }' : ''}(?)`);
+                    console.error(`Friendly:      Error decoding transaction!`);
+                    console.error(`Raw:           ${destination}.${methodSignature}${value > 0 ? '{ value: '+value+' }' : ''}(?)`);
+                }
+
+                const confirmationsString = confirmations.length >= required
+                    ? chalk.green(`${confirmations.length}/${required}`)
+                    : chalk.yellow(`${confirmations.length}/${required}`);
+                const friendlyColoredConfirmations = confirmations.map(confirmation => getFriendlyColoredConfirmation(confirmation, addressOptions));
+
+                console.log(`Confirmations: ${confirmationsString} ${showConfirmingAddresses ? `[${friendlyColoredConfirmations}]` : ``}`);
+                console.log(`Executed:      ${executed ? chalk.green(executed) : chalk.yellow(executed)}`);
+                if (confirmations.length >= required && !executed) {
+                    console.log(`Execution gas estimation: ${gasEstimate ?? 'ERROR'}`);
                 }
 
                 break;
