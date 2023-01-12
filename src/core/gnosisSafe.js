@@ -72,6 +72,10 @@ const confirm = async ({ multisigAddress, safeTxHash }) => {
     return await safeService.confirmTransaction(safeTxHash, safeSignature.data);
 };
 
+const revoke = async ({ multisigAddress, safeTxHash }) => {
+    throw new Error(`Gnosis safe revoke is not yet supported via scripts`);
+};
+
 const execute = async ({ multisigAddress, safeTxHash }) => {
     web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
     const adapter = new Web3Adapter({
@@ -122,5 +126,6 @@ const execute = async ({ multisigAddress, safeTxHash }) => {
 module.exports = {
     propose,
     confirm,
+    revoke,
     execute,
 };
