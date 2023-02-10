@@ -5,6 +5,8 @@ const ADDRESS = require('../../config/address.json');
 const CONSTANTS = require('../core/constants');
 const { propose: gnosisMultisigPropose } = require('../core/gnosisMultisig');
 const { propose: gnosisSafePropose } = require('../core/gnosisSafe');
+const path = require('node:path');
+const fs = require('node:fs');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
@@ -13,12 +15,13 @@ let gasSpent = web3.utils.toBN(0);
 // Change These Variables
 // --------------------------------------------------
 const tokenAddresses = [
-  '0x0000000000000000000000000000000000000000',
+  ADDRESS.PFL,
 ];
-const spender = '0x0000000000000000000000000000000000000000';
+const spender = ADDRESS.FLARE_ROUTER;
 const allowanceAmount = CONSTANTS.MAX_UINT256;
-const multisigAddress = ADDRESS.PANGOLIN_GNOSIS_SAFE_ADDRESS;
-const multisigType = CONSTANTS.GNOSIS_SAFE;
+const multisigAddress = ADDRESS.FLARE_GNOSIS_MULTISIG_ADDRESS;
+const multisigType = CONSTANTS.GNOSIS_MULTISIG;
+const bytecodeOnly = false;
 // --------------------------------------------------
 
 
@@ -34,6 +37,17 @@ const multisigType = CONSTANTS.GNOSIS_SAFE;
         if (balance.gt(allowance)) {
             const tx = tokenContract.methods.approve(spender, allowanceAmount);
             const bytecode = tx.encodeABI();
+
+            const fileName = path.basename(__filename, '.js');
+            const fileOutput = path.join(__dirname, `${fileName}-${spender}-${tokenAddress}-bytecode.txt`);
+            fs.writeFileSync(fileOutput, bytecode);
+            console.log(`Encoded bytecode to ${fileOutput}`);
+            console.log();
+
+            if (bytecodeOnly) {
+                console.log(`Skipping approval due to "bytecodeOnly" flag`);
+                continue;
+            }
 
             console.log(`Proposing approval for ${tokenAddress} ...`);
 

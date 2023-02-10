@@ -64,6 +64,43 @@ const confirm = async ({ multisigAddress, id, includeExtraGas, nonce }) => {
     return tx.send(txConfig);
 };
 
+const revoke = async ({ multisigAddress, id, includeExtraGas, nonce }) => {
+    web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
+
+    const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
+
+    const { executed } = await multisigContract.methods.transactions(id).call();
+    if (executed) {
+        console.log(`Skipping #${id} due to prior execution`);
+        return;
+    }
+
+    const alreadyConfirmed = await multisigContract.methods.confirmations(id, CONFIG.WALLET.ADDRESS).call();
+    if (!alreadyConfirmed) {
+        console.log(`Skipping #${id} due to lack of confirmation`);
+        return;
+    }
+
+    const tx = multisigContract.methods.revokeConfirmation(id);
+
+    const gas = await tx.estimateGas({ from: CONFIG.WALLET.ADDRESS });
+    const baseGasPrice = await web3.eth.getGasPrice();
+
+    const txConfig = {
+        from: CONFIG.WALLET.ADDRESS,
+        gas: includeExtraGas ? 7500000 : gas,
+        maxFeePerGas: baseGasPrice * 2,
+        maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+    };
+
+    // Conditionally specify nonce
+    if (nonce !== undefined) txConfig.nonce = nonce;
+
+    console.log(`Revoking transaction #${id} ...`);
+
+    return tx.send(txConfig);
+};
+
 const verify = async ({ multisigAddress, id }) => {
     const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
 
@@ -113,6 +150,7 @@ const execute = async ({ multisigAddress, id, nonce }) => {
 module.exports = {
     propose,
     confirm,
+    revoke,
     verify,
     execute,
 };
