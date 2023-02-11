@@ -1,5 +1,6 @@
 const {Client, ContractExecuteTransaction, AccountId, ContractFunctionParameters, ContractInfoQuery, PrivateKey, ContractCallQuery} = require('@hashgraph/sdk');
 const Web3 = require('web3');
+const Helper = require('../core/helpers');
 
 // Variables
 // --------------------------------------------------
@@ -30,11 +31,11 @@ if (!TREASURY_VESTER || !Web3.utils.isAddress(TREASURY_VESTER)) {
 if (!REWARD_FUNDING_FORWARDER || !Web3.utils.isAddress(REWARD_FUNDING_FORWARDER)) {
     throw new Error('Invalid REWARD_FUNDING_FORWARDER');
 }
-if (!SAFE_FUNDER || !Web3.utils.isAddress(SAFE_FUNDER)) {
+if (!!SAFE_FUNDER && !Web3.utils.isAddress(SAFE_FUNDER)) {
     throw new Error('Invalid SAFE_FUNDER');
 }
-if (Number.isInteger(EMISSION_DIVERSION_PID)) {
-    throw new Error('Invalid EMISSION_DIVERSION_PID');
+if (!!SAFE_FUNDER && !EMISSION_DIVERSION_PID) {
+    throw new Error('SAFE_FUNDER and EMISSION_DIVERSION_PID are jointly required');
 }
 // --------------------------------------------------
 
@@ -58,6 +59,8 @@ main()
   });
 
 async function main() {
+    const isSafeDiversionEnabled = !!SAFE_FUNDER && !Helper.isSameAddress(SAFE_FUNDER, '0x0000000000000000000000000000000000000000');
+
     while (true) {
         let tx, receipt, record;
 
@@ -117,17 +120,19 @@ async function main() {
         receipt = await tx.getReceipt(client);
         console.log(`Forwarded PangoChef funding!`);
 
-        console.log(`Forwarding StakingPositions funding ...`);
-        tx = await new ContractExecuteTransaction()
-            .setContractId(AccountId.fromSolidityAddress(SAFE_FUNDER).toString())
-            .setGas(375_000)
-            .setFunction('claimAndAddRewardUsingDiverter',
-                new ContractFunctionParameters()
-                    .addUint256(parseInt(EMISSION_DIVERSION_PID))
-            )
-            .execute(client);
-        receipt = await tx.getReceipt(client);
-        console.log(`Forwarded StakingPositions funding!`);
+        if (isSafeDiversionEnabled) {
+            console.log(`Forwarding StakingPositions funding ...`);
+            tx = await new ContractExecuteTransaction()
+                .setContractId(AccountId.fromSolidityAddress(SAFE_FUNDER).toString())
+                .setGas(375_000)
+                .setFunction('claimAndAddRewardUsingDiverter',
+                    new ContractFunctionParameters()
+                        .addUint256(parseInt(EMISSION_DIVERSION_PID))
+                )
+                .execute(client);
+            receipt = await tx.getReceipt(client);
+            console.log(`Forwarded StakingPositions funding!`);
+        }
     }
 }
 
