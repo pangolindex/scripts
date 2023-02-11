@@ -9,7 +9,7 @@ const NETWORK = process.env.NETWORK;
 const PNG_HTS_ADDRESS = process.env.PNG_HTS_ADDRESS;
 const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const REWARD_FUNDING_FORWARDER = process.env.REWARD_FUNDING_FORWARDER;
-const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
+const SAFE_FUNDER = process.env.SAFE_FUNDER;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
 // --------------------------------------------------
 if (!WALLET || !Web3.utils.isAddress(WALLET)) {
@@ -30,8 +30,8 @@ if (!TREASURY_VESTER || !Web3.utils.isAddress(TREASURY_VESTER)) {
 if (!REWARD_FUNDING_FORWARDER || !Web3.utils.isAddress(REWARD_FUNDING_FORWARDER)) {
     throw new Error('Invalid REWARD_FUNDING_FORWARDER');
 }
-if (!EMISSION_DIVERSION || !Web3.utils.isAddress(EMISSION_DIVERSION)) {
-    throw new Error('Invalid EMISSION_DIVERSION');
+if (!SAFE_FUNDER || !Web3.utils.isAddress(SAFE_FUNDER)) {
+    throw new Error('Invalid SAFE_FUNDER');
 }
 if (Number.isInteger(EMISSION_DIVERSION_PID)) {
     throw new Error('Invalid EMISSION_DIVERSION_PID');
@@ -119,9 +119,9 @@ async function main() {
 
         console.log(`Forwarding StakingPositions funding ...`);
         tx = await new ContractExecuteTransaction()
-            .setContractId(AccountId.fromSolidityAddress(EMISSION_DIVERSION).toString())
-            .setGas(320_000)
-            .setFunction('claimAndAddReward',
+            .setContractId(AccountId.fromSolidityAddress(SAFE_FUNDER).toString())
+            .setGas(375_000)
+            .setFunction('claimAndAddRewardUsingDiverter',
                 new ContractFunctionParameters()
                     .addUint256(parseInt(EMISSION_DIVERSION_PID))
             )

@@ -10,6 +10,7 @@ const WALLET = process.env.WALLET;
 const KEY = process.env.KEY;
 const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const TREASURY_VESTER_PROXY = process.env.TREASURY_VESTER_PROXY;
+const SAFE_FUNDER = process.env.SAFE_FUNDER;
 const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
 const TX_MAX_FEE = process.env.TX_MAX_FEE;
@@ -30,11 +31,20 @@ if (!Web3.utils.isAddress(TREASURY_VESTER)) {
 if (!!TREASURY_VESTER_PROXY && !Web3.utils.isAddress(TREASURY_VESTER_PROXY)) {
     throw new Error('Invalid TREASURY_VESTER_PROXY');
 }
+if (!!SAFE_FUNDER && !Web3.utils.isAddress(SAFE_FUNDER)) {
+    throw new Error('Invalid SAFE_FUNDER');
+}
 if (!!EMISSION_DIVERSION && !Web3.utils.isAddress(EMISSION_DIVERSION)) {
     throw new Error('Invalid EMISSION_DIVERSION');
 }
+if (!!SAFE_FUNDER && !!EMISSION_DIVERSION) {
+    throw new Error('SAFE_FUNDER and EMISSION_DIVERSION cannot be jointly provided');
+}
 if ((!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID) || (!EMISSION_DIVERSION && !!EMISSION_DIVERSION_PID)) {
     throw new Error('EMISSION_DIVERSION and EMISSION_DIVERSION_PID are jointly required');
+}
+if ((!!SAFE_FUNDER && !EMISSION_DIVERSION_PID) || (!SAFE_FUNDER && !!EMISSION_DIVERSION_PID)) {
+    throw new Error('SAFE_FUNDER and EMISSION_DIVERSION_PID are jointly required');
 }
 // --------------------------------------------------
 
@@ -51,13 +61,14 @@ main()
 
 async function main() {
     const isProxyEnabled = !!TREASURY_VESTER_PROXY && !Helper.isSameAddress(TREASURY_VESTER_PROXY, '0x0000000000000000000000000000000000000000');
-    const isDiversionEnabled = !!EMISSION_DIVERSION && !Helper.isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
+    const isEmissionDiversionEnabled = !!EMISSION_DIVERSION && !Helper.isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
+    const isSafeDiversionEnabled = !!SAFE_FUNDER && !Helper.isSameAddress(SAFE_FUNDER, '0x0000000000000000000000000000000000000000');
     const treasuryVester = new web3.eth.Contract(isProxyEnabled ? ABI.TREASURY_VESTER_LEGACY : ABI.TREASURY_VESTER, TREASURY_VESTER);
     const treasuryVesterProxy = new web3.eth.Contract(ABI.TREASURY_VESTER_PROXY, TREASURY_VESTER_PROXY);
     const emissionDiversion = new web3.eth.Contract(ABI.EMISSION_DIVERSION_FROM_PANGO_CHEF_TO_STAKING_POSITIONS, EMISSION_DIVERSION);
+    const safeFunder = new web3.eth.Contract(ABI.SAFE_FUNDER_FOR_PANGOLIN_STAKING_POSITIONS, SAFE_FUNDER);
     const vestContract = isProxyEnabled ? treasuryVesterProxy : treasuryVester;
     const vestMethod = isProxyEnabled ? 'claimAndDistribute' : 'distribute';
-    const vestArgs = isProxyEnabled ? [] : [];
     const SECOND = Web3.utils.toBN(1000);
     const DAY = Web3.utils.toBN(86400000);
 
@@ -74,7 +85,7 @@ async function main() {
         // Wait for available funds
         while (fundsNextAvailableEpochTime.gte(now())) {
             const delay = fundsNextAvailableEpochTime.sub(now());
-            await sleep(delay);
+            await sleep(delay.add(SECOND));
         }
 
         let errorCount = 0;
@@ -83,7 +94,7 @@ async function main() {
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
                 console.log(`Calculating parameters for ${vestMethod}() ...`);
-                const tx = vestContract.methods[vestMethod](...vestArgs);
+                const tx = vestContract.methods[vestMethod]();
                 const gas = await tx.estimateGas({ from: WALLET });
                 const baseGasPrice = await web3.eth.getGasPrice();
 
@@ -95,24 +106,28 @@ async function main() {
                     maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
                 });
                 console.log(`Vest transaction hash: ${receipt.transactionHash}`);
+                break;
             } catch (error) {
                 console.error(`Error attempting ${vestMethod}()`);
                 console.error(error.message);
                 if (++errorCount >= 5) {
                     throw new Error(`Maximum retry count (${errorCount}) exceeded`);
                 }
+                await sleep(SECOND.muln(5));
             }
-            await sleep(SECOND.muln(5));
         }
 
-        if (isDiversionEnabled) {
+        if (isEmissionDiversionEnabled || isSafeDiversionEnabled) {
+            const diversionContract = isEmissionDiversionEnabled ? emissionDiversion : safeFunder;
+            const diversionMethod = isEmissionDiversionEnabled ? 'claimAndAddReward' : 'claimAndAddRewardUsingDiverter';
+
             try {
-                console.log(`Calculating parameters for claimAndAddReward(${EMISSION_DIVERSION_PID}) ...`);
-                const tx = emissionDiversion.methods.claimAndAddReward(EMISSION_DIVERSION_PID);
+                console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
                 const gas = await tx.estimateGas({ from: WALLET });
                 const baseGasPrice = await web3.eth.getGasPrice();
 
-                console.log(`Sending claimAndAddReward(${EMISSION_DIVERSION_PID}) ...`);
+                console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
                 const receipt = await tx.send({
                     from: WALLET,
                     gas,
@@ -121,7 +136,7 @@ async function main() {
                 });
                 console.log(`Diversion transaction hash: ${receipt.transactionHash}`);
             } catch (error) {
-                console.error(`Error attempting claimAndAddReward(${EMISSION_DIVERSION_PID})`);
+                console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
                 console.error(error.message);
             }
         }
