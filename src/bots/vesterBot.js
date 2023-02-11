@@ -40,10 +40,10 @@ if (!!EMISSION_DIVERSION && !Web3.utils.isAddress(EMISSION_DIVERSION)) {
 if (!!SAFE_FUNDER && !!EMISSION_DIVERSION) {
     throw new Error('SAFE_FUNDER and EMISSION_DIVERSION cannot be jointly provided');
 }
-if ((!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID) || (!EMISSION_DIVERSION && !!EMISSION_DIVERSION_PID)) {
+if ((!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID)) {
     throw new Error('EMISSION_DIVERSION and EMISSION_DIVERSION_PID are jointly required');
 }
-if ((!!SAFE_FUNDER && !EMISSION_DIVERSION_PID) || (!SAFE_FUNDER && !!EMISSION_DIVERSION_PID)) {
+if ((!!SAFE_FUNDER && !EMISSION_DIVERSION_PID)) {
     throw new Error('SAFE_FUNDER and EMISSION_DIVERSION_PID are jointly required');
 }
 // --------------------------------------------------
