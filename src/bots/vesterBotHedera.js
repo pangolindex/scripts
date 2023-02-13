@@ -10,7 +10,7 @@ const NETWORK = process.env.NETWORK;
 const PNG_HTS_ADDRESS = process.env.PNG_HTS_ADDRESS;
 const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const REWARD_FUNDING_FORWARDER = process.env.REWARD_FUNDING_FORWARDER;
-const SAFE_FUNDER = process.env.SAFE_FUNDER;
+const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
 // --------------------------------------------------
 if (!WALLET || !Web3.utils.isAddress(WALLET)) {
@@ -31,11 +31,11 @@ if (!TREASURY_VESTER || !Web3.utils.isAddress(TREASURY_VESTER)) {
 if (!REWARD_FUNDING_FORWARDER || !Web3.utils.isAddress(REWARD_FUNDING_FORWARDER)) {
     throw new Error('Invalid REWARD_FUNDING_FORWARDER');
 }
-if (!!SAFE_FUNDER && !Web3.utils.isAddress(SAFE_FUNDER)) {
-    throw new Error('Invalid SAFE_FUNDER');
+if (!!EMISSION_DIVERSION && !Web3.utils.isAddress(EMISSION_DIVERSION)) {
+    throw new Error('Invalid EMISSION_DIVERSION');
 }
-if (!!SAFE_FUNDER && !EMISSION_DIVERSION_PID) {
-    throw new Error('SAFE_FUNDER and EMISSION_DIVERSION_PID are jointly required');
+if (!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID) {
+    throw new Error('EMISSION_DIVERSION and EMISSION_DIVERSION_PID are jointly required');
 }
 // --------------------------------------------------
 
@@ -59,7 +59,7 @@ main()
   });
 
 async function main() {
-    const isSafeDiversionEnabled = !!SAFE_FUNDER && !Helper.isSameAddress(SAFE_FUNDER, '0x0000000000000000000000000000000000000000');
+    const isDiversionEnabled = !!EMISSION_DIVERSION && !Helper.isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
 
     while (true) {
         let tx, receipt, record;
@@ -120,12 +120,12 @@ async function main() {
         receipt = await tx.getReceipt(client);
         console.log(`Forwarded PangoChef funding!`);
 
-        if (isSafeDiversionEnabled) {
+        if (isDiversionEnabled) {
             console.log(`Forwarding StakingPositions funding ...`);
             tx = await new ContractExecuteTransaction()
-                .setContractId(AccountId.fromSolidityAddress(SAFE_FUNDER).toString())
-                .setGas(375_000)
-                .setFunction('claimAndAddRewardUsingDiverter',
+                .setContractId(AccountId.fromSolidityAddress(EMISSION_DIVERSION).toString())
+                .setGas(325_000)
+                .setFunction('claimAndAddReward',
                     new ContractFunctionParameters()
                         .addUint256(parseInt(EMISSION_DIVERSION_PID))
                 )
