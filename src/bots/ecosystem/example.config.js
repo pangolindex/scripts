@@ -4,7 +4,7 @@
 const config = [
   {
     name: 'vester',
-    script: './vesterBot.js',
+    script: './vesterBotEVM.js',
     env: {
       WALLET: '',
       KEY: '',

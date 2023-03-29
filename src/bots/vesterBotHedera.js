@@ -1,6 +1,5 @@
-const {Client, ContractExecuteTransaction, AccountId, ContractFunctionParameters, ContractInfoQuery, PrivateKey, ContractCallQuery} = require('@hashgraph/sdk');
 const Web3 = require('web3');
-const Helper = require('../core/helpers');
+const {Client, ContractExecuteTransaction, AccountId, ContractFunctionParameters, ContractInfoQuery, PrivateKey, ContractCallQuery} = require('@hashgraph/sdk');
 
 // Variables
 // --------------------------------------------------
@@ -59,7 +58,7 @@ main()
   });
 
 async function main() {
-    const isDiversionEnabled = !!EMISSION_DIVERSION && !Helper.isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
+    const isDiversionEnabled = !!EMISSION_DIVERSION && !isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
 
     while (true) {
         let tx, receipt, record;
@@ -82,15 +81,14 @@ async function main() {
         let errorCount = 0;
         while ((await getLastUpdatedTime()).eq(fundsLastAvailableBlockTime)) {
             try {
-                console.log(`Sending distribute() ...`);
+                console.log(`Distributing daily funds ...`);
                 tx = await new ContractExecuteTransaction()
                     .setContractId(AccountId.fromSolidityAddress(TREASURY_VESTER).toString())
                     .setGas(1_200_000)
                     .setFunction('distribute')
                     .execute(client);
-                receipt = await tx.getReceipt(client);
                 record = await tx.getRecord(client);
-                console.log(`Vest transaction hash: ${record.transactionId.toString()}`);
+                console.log(`Distributing daily funds hash: ${record.transactionId.toString()}`);
                 break;
             } catch (error) {
                 console.error(`Error attempting distribute()`);
@@ -106,7 +104,7 @@ async function main() {
             .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
             .execute(client);
         const pngBalance = tx.tokenRelationships.get(AccountId.fromSolidityAddress(PNG_HTS_ADDRESS).toString()).balance;
-        console.log(`Found PNG balance: ${pngBalance.toString()}`);
+        console.log(`Fetching balance of RewardFundingForwarder (PangoChef): ${pngBalance.toString()}`);
 
         console.log(`Forwarding PangoChef funding ...`);
         tx = await new ContractExecuteTransaction()
@@ -117,8 +115,8 @@ async function main() {
                     .addUint256(pngBalance.toNumber())
             )
             .execute(client);
-        receipt = await tx.getReceipt(client);
-        console.log(`Forwarded PangoChef funding!`);
+        record = await tx.getRecord(client);
+        console.log(`Forwarding PangoChef funding hash: ${record.transactionId.toString()}`);
 
         if (isDiversionEnabled) {
             console.log(`Forwarding StakingPositions funding ...`);
@@ -130,8 +128,8 @@ async function main() {
                         .addUint256(parseInt(EMISSION_DIVERSION_PID))
                 )
                 .execute(client);
-            receipt = await tx.getReceipt(client);
-            console.log(`Forwarded StakingPositions funding!`);
+            record = await tx.getRecord(client);
+            console.log(`Forwarding StakingPositions funding hash: ${record.transactionId.toString()}`);
         }
     }
 }
@@ -160,4 +158,9 @@ async function getLastUpdatedTime() {
 
 function now() {
     return new Web3().utils.toBN(Date.now());
+}
+
+function isSameAddress(a, b) {
+    if (!a || !b) return false;
+    return a.toLowerCase() === b.toLowerCase();
 }
