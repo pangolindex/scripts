@@ -8,6 +8,7 @@ They are configured via environment variables and are presented to be easily run
 
 ### Install dependencies
 ```bash
+cd src/bots
 npm install
 npm install -g pm2
 ```

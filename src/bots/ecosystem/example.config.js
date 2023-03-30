@@ -4,7 +4,7 @@
 const config = [
   {
     name: 'vester',
-    script: './vesterBot.js',
+    script: './vesterBotEVM.js',
     env: {
       WALLET: '',
       KEY: '',
@@ -41,6 +41,8 @@ const apps = config.map(app => ({
   ...app,
   name: `${ECOSYSTEM}/${app.name}`,
   namespace: ECOSYSTEM,
+  time: true,
+  log_file: `logs/${ECOSYSTEM}-${app.name}.log`,
 }));
 
 module.exports = { apps };
