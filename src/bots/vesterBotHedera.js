@@ -74,7 +74,7 @@ async function main() {
         // Wait for available funds
         while (fundsNextAvailableEpochTime.gte(now())) {
             const delay = fundsNextAvailableEpochTime.sub(now());
-            await sleep(delay.add(SECOND));
+            await sleep(delay.add(SECOND), true);
         }
 
         // Distribute funds
@@ -131,15 +131,20 @@ async function main() {
             record = await tx.getRecord(client);
             console.log(`Forwarding StakingPositions funding hash: ${record.transactionId.toString()}`);
         }
+
+        // Fixed delay to allow chain data via potentially slower nodes to update
+        await sleep(SECOND.muln(10));
     }
 }
 
-function sleep(ms) {
+function sleep(ms, display=false) {
     if (ms.isNeg()) return;
 
     const wakeTime = ms.add(now());
 
-    console.log(`Sleeping until ${new Date(wakeTime.toNumber()).toLocaleString('en-US')} (${ms.toNumber().toLocaleString('en-US')} ms) ...`);
+    if (display) {
+        console.log(`Sleeping until ${new Date(wakeTime.toNumber()).toLocaleString('en-US')} (${ms.toNumber().toLocaleString('en-US')} ms) ...`);
+    }
 
     return new Promise((resolve) => {
         setTimeout(resolve, ms.toNumber());

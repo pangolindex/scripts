@@ -87,9 +87,8 @@ async function main() {
             await sleep(delay.add(SECOND), true);
         }
 
-        let errorCount = 0;
-
         // Vest funds
+        let errorCount = 0;
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
                 console.log(`Calculating parameters for ${vestMethod}() ...`);
@@ -139,6 +138,9 @@ async function main() {
                 console.error(error.message);
             }
         }
+
+        // Fixed delay to allow chain data via potentially slower nodes to update
+        await sleep(SECOND.muln(10));
     }
 }
 
