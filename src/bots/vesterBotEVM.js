@@ -129,7 +129,6 @@ async function main() {
                             DISCORD_TOKEN,
                             DISCORD_CHANNEL_ID,
                             {
-                                methodFrom: WALLET,
                                 methodTo: vestContract._address,
                                 methodName: `${vestMethod}()`,
                                 message: error.message,
@@ -154,7 +153,31 @@ async function main() {
                 try {
                     console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
                     const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
-                    const gas = await tx.estimateGas({ from: WALLET });
+
+                    let gas;
+                    try {
+                        gas = await tx.estimateGas({ from: WALLET });
+                    } catch (gasEstimationError) {
+                        // Gracefully handle overflow detections when using safe diverter
+                        if (isSafeDiversionEnabled && gasEstimationError.message.includes('execution reverted: OVERFLOW')) {
+                            console.log(`Skipping ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`);
+                            if (isDiscordEnabled) {
+                                await Discord.generalAlert(
+                                    DISCORD_TOKEN,
+                                    DISCORD_CHANNEL_ID,
+                                    {
+                                        message: `Skipped ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`,
+                                        link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                        chainId: DISCORD_CHAIN_ID,
+                                    },
+                                );
+                            }
+                            break;
+                        } else {
+                            throw gasEstimationError;
+                        }
+                    }
+
                     const baseGasPrice = await web3.eth.getGasPrice();
 
                     console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
@@ -175,7 +198,6 @@ async function main() {
                                 DISCORD_TOKEN,
                                 DISCORD_CHANNEL_ID,
                                 {
-                                    methodFrom: WALLET,
                                     methodTo: diversionContract._address,
                                     methodName: `${diversionMethod}(${EMISSION_DIVERSION_PID})`,
                                     message: error.message,

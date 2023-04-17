@@ -34,7 +34,7 @@ const lowBalance = async (discord_token, discord_channel_id, {walletAddress, wal
     });
 };
 
-const vestingCompleted = async (discord_token, discord_channel_id, {transactionHash, message, chainId, link, roleIds = []} = {}) => {
+const vestingCompleted = async (discord_token, discord_channel_id, {transactionHashes = [], message, chainId, link, roleIds = []} = {}) => {
     return new Promise((resolve, reject) => {
         client
             .on('ready', async () => {
@@ -48,9 +48,9 @@ const vestingCompleted = async (discord_token, discord_channel_id, {transactionH
                 if (roleIds?.length > 0) {
                     embed.setDescription(roleIds.map(roleId => `<@&${roleId}>`).join(' '));
                 }
-                if (transactionHash) {
+                transactionHashes.forEach(transactionHash => {
                     embed.addFields({name: 'Transaction', value: transactionHash});
-                }
+                });
                 if (message) {
                     embed.addFields({name: 'Message', value: message});
                 }
@@ -99,6 +99,31 @@ const smartContractError = async (discord_token, discord_channel_id, {transactio
     });
 };
 
+const generalAlert = async (discord_token, discord_channel_id, {title = 'Alert', message, chainId, link, color = Colors.Yellow, roleIds = []} = {}) => {
+    return new Promise((resolve, reject) => {
+        client
+            .on('ready', async () => {
+                let embed = new EmbedBuilder();
+                embed.setColor(color);
+                embed.setAuthor({
+                    name: title,
+                    iconURL: chainId ? `https://raw.githubusercontent.com/pangolindex/tokens/main/assets/${chainId}/0x0000000000000000000000000000000000000000/logo_24.png` : undefined,
+                    url: link ?? undefined,
+                })
+                if (roleIds?.length > 0) {
+                    embed.setDescription(roleIds.map(roleId => `<@&${roleId}>`).join(' '));
+                }
+                if (message) {
+                    embed.addFields({name: 'Message', value: message});
+                }
+                await client.channels.cache.get(discord_channel_id).send({embeds: [embed]});
+                client.destroy();
+                resolve();
+            })
+            .login(discord_token);
+    });
+};
+
 const generateAddressLink = (address, chainId) => {
     switch (chainId.toString()) {
         case '43113':
@@ -128,5 +153,6 @@ module.exports = {
     lowBalance,
     vestingCompleted,
     smartContractError,
+    generalAlert,
     generateAddressLink,
 };
