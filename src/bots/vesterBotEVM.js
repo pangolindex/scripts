@@ -1,5 +1,6 @@
 const Web3 = require('web3');
 const ABI = require('./abi.json');
+const Discord = require('./discord');
 
 
 // Variables
@@ -12,8 +13,13 @@ const TREASURY_VESTER_PROXY = process.env.TREASURY_VESTER_PROXY;
 const SAFE_FUNDER = process.env.SAFE_FUNDER;
 const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
+const LOW_BALANCE_THRESHOLD = process.env.LOW_BALANCE_THRESHOLD;
 const TX_MAX_FEE = process.env.TX_MAX_FEE;
 const TX_MAX_PRIORITY_FEE = process.env.TX_MAX_PRIORITY_FEE;
+const DISCORD_ENABLED = process.env.DISCORD_ENABLED;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const DISCORD_CHAIN_ID = process.env.DISCORD_CHAIN_ID;
 // --------------------------------------------------
 if (!RPC) {
     throw new Error('Invalid RPC');
@@ -45,6 +51,11 @@ if ((!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID)) {
 if ((!!SAFE_FUNDER && !EMISSION_DIVERSION_PID)) {
     throw new Error('SAFE_FUNDER and EMISSION_DIVERSION_PID are jointly required');
 }
+if (DISCORD_ENABLED === 'true') {
+    if ((!!DISCORD_TOKEN && !DISCORD_CHANNEL_ID) || (!DISCORD_TOKEN && !!DISCORD_CHANNEL_ID)) {
+        throw new Error('DISCORD_TOKEN and DISCORD_CHANNEL_ID are jointly required');
+    }
+}
 // --------------------------------------------------
 
 
@@ -59,6 +70,7 @@ main()
   });
 
 async function main() {
+    const isDiscordEnabled = DISCORD_ENABLED === 'true';
     const isProxyEnabled = !!TREASURY_VESTER_PROXY && !isSameAddress(TREASURY_VESTER_PROXY, '0x0000000000000000000000000000000000000000');
     const isEmissionDiversionEnabled = !!EMISSION_DIVERSION && !isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
     const isSafeDiversionEnabled = !!SAFE_FUNDER && !isSameAddress(SAFE_FUNDER, '0x0000000000000000000000000000000000000000');
@@ -87,8 +99,11 @@ async function main() {
             await sleep(delay.add(SECOND), true);
         }
 
+        // Used for retries
+        let errorCount;
+
         // Vest funds
-        let errorCount = 0;
+        errorCount = 0;
         while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
             try {
                 console.log(`Calculating parameters for ${vestMethod}() ...`);
@@ -108,34 +123,100 @@ async function main() {
             } catch (error) {
                 console.error(`Error attempting ${vestMethod}()`);
                 console.error(error.message);
-                if (++errorCount >= 5) {
+                if (++errorCount >= 3) {
+                    if (isDiscordEnabled) {
+                        await Discord.smartContractError(
+                            DISCORD_TOKEN,
+                            DISCORD_CHANNEL_ID,
+                            {
+                                methodFrom: WALLET,
+                                methodTo: vestContract._address,
+                                methodName: `${vestMethod}()`,
+                                message: error.message,
+                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                chainId: DISCORD_CHAIN_ID,
+                            },
+                        );
+                    }
                     throw new Error(`Maximum retry count (${errorCount}) exceeded`);
                 }
                 await sleep(SECOND.muln(5));
             }
         }
 
+        // Fund chef
+        errorCount = 0;
         if (isEmissionDiversionEnabled || isSafeDiversionEnabled) {
             const diversionContract = isEmissionDiversionEnabled ? emissionDiversion : safeFunder;
             const diversionMethod = isEmissionDiversionEnabled ? 'claimAndAddReward' : 'claimAndAddRewardUsingDiverter';
 
-            try {
-                console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
-                const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
-                const gas = await tx.estimateGas({ from: WALLET });
-                const baseGasPrice = await web3.eth.getGasPrice();
+            while (true) {
+                try {
+                    console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                    const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
+                    const gas = await tx.estimateGas({ from: WALLET });
+                    const baseGasPrice = await web3.eth.getGasPrice();
 
-                console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
-                const receipt = await tx.send({
-                    from: WALLET,
-                    gas,
-                    maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
-                    maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
-                });
-                console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) hash: ${receipt.transactionHash}`);
-            } catch (error) {
-                console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
-                console.error(error.message);
+                    console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                    const receipt = await tx.send({
+                        from: WALLET,
+                        gas,
+                        maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
+                        maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
+                    });
+                    console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) hash: ${receipt.transactionHash}`);
+                    break;
+                } catch (error) {
+                    console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
+                    console.error(error.message);
+                    if (++errorCount > 3) {
+                        if (isDiscordEnabled) {
+                            await Discord.smartContractError(
+                                DISCORD_TOKEN,
+                                DISCORD_CHANNEL_ID,
+                                {
+                                    methodFrom: WALLET,
+                                    methodTo: diversionContract._address,
+                                    methodName: `${diversionMethod}(${EMISSION_DIVERSION_PID})`,
+                                    message: error.message,
+                                    link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                    chainId: DISCORD_CHAIN_ID,
+                                },
+                            );
+                        }
+                        throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                    }
+                    await sleep(SECOND.muln(5));
+                }
+            }
+        }
+
+        if (isDiscordEnabled) {
+            await Discord.vestingCompleted(
+                DISCORD_TOKEN,
+                DISCORD_CHANNEL_ID,
+                {
+                    chainId: DISCORD_CHAIN_ID,
+                },
+            );
+        }
+
+        if (LOW_BALANCE_THRESHOLD) {
+            const balance = await web3.eth.getBalance(WALLET).then(web3.utils.toBN);
+            if (balance.lt(Web3.utils.toBN(LOW_BALANCE_THRESHOLD))) {
+                console.log(`Low balance detected of ${balance.toString()}`);
+                if (isDiscordEnabled) {
+                    await Discord.lowBalance(
+                        DISCORD_TOKEN,
+                        DISCORD_CHANNEL_ID,
+                        {
+                            walletAddress: WALLET,
+                            walletName: 'Vester Bot',
+                            link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                            chainId: DISCORD_CHAIN_ID,
+                        },
+                    );
+                }
             }
         }
 
