@@ -5,6 +5,7 @@
   "author": "bmino",
   "dependencies": {
     "@hashgraph/sdk": "2.22.0",
+    "discord.js": "14.9.0",
     "web3": "1.8.2"
   }
 }

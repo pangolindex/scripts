@@ -11,6 +11,11 @@ const config = [
       RPC: 'https://api.avax.network/ext/bc/C/rpc',
       TREASURY_VESTER: '0x6747AC215dAFfeE03a42F49FebB6ab448E12acEe',
       TREASURY_VESTER_PROXY: '0x503C4e38c80B1D17e2c653E142770CeA060a8bB7',
+      LOW_BALANCE_THRESHOLD: '1000000000000000000',
+      DISCORD_ENABLED: false,
+      DISCORD_TOKEN: '',
+      DISCORD_CHANNEL_ID: '',
+      DISCORD_CHAIN_ID: '43114',
     },
   },
   {
@@ -43,6 +48,7 @@ const apps = config.map(app => ({
   namespace: ECOSYSTEM,
   time: true,
   log_file: `logs/${ECOSYSTEM}-${app.name}.log`,
+  autorestart: false,
 }));
 
 module.exports = { apps };
