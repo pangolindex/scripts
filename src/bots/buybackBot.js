@@ -73,16 +73,16 @@ harvestWrapper();
 async function harvestWrapper() {
     harvest()
         .then(scheduleNextHarvest)
-        .catch(async (err) => {
-            console.error(err);
+        .catch(async (error) => {
+            console.error(error);
             if (isDiscordEnabled) {
-                await Discord.smartContractResult(
+                await Discord.generalAlert(
                     DISCORD_TOKEN,
                     DISCORD_CHANNEL_ID,
                     {
-                        title: 'Fatal Buyback Error',
+                        title: 'Fatal Buyback Bot Error',
                         color: Discord.Colors.Red,
-                        message: err.message,
+                        message: error.message,
                         link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
                         chainId: DISCORD_CHAIN_ID,
                     },
@@ -221,7 +221,7 @@ async function harvest() {
     console.log(`Sending harvest() hash: ${receipt.transactionHash}`);
 
     if (isDiscordEnabled) {
-        await Discord.smartContractResult(
+        await Discord.generalAlert(
             DISCORD_TOKEN,
             DISCORD_CHANNEL_ID,
             {
