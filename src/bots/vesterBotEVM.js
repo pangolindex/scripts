@@ -61,16 +61,28 @@ if (DISCORD_ENABLED === 'true') {
 
 const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
 web3.eth.accounts.wallet.add(KEY);
+const isDiscordEnabled = DISCORD_ENABLED === 'true';
 
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch(async (error) => {
       console.error(error);
-      process.exit(1);
+      if (isDiscordEnabled) {
+          await Discord.generalAlert(
+              DISCORD_TOKEN,
+              DISCORD_CHANNEL_ID,
+              {
+                  title: 'Fatal Vesting Bot Error',
+                  color: Discord.Colors.Red,
+                  message: error.message,
+                  link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                  chainId: DISCORD_CHAIN_ID,
+              },
+          );
+      }
   });
 
 async function main() {
-    const isDiscordEnabled = DISCORD_ENABLED === 'true';
     const isProxyEnabled = !!TREASURY_VESTER_PROXY && !isSameAddress(TREASURY_VESTER_PROXY, '0x0000000000000000000000000000000000000000');
     const isEmissionDiversionEnabled = !!EMISSION_DIVERSION && !isSameAddress(EMISSION_DIVERSION, '0x0000000000000000000000000000000000000000');
     const isSafeDiversionEnabled = !!SAFE_FUNDER && !isSameAddress(SAFE_FUNDER, '0x0000000000000000000000000000000000000000');
@@ -196,7 +208,7 @@ async function main() {
                 } catch (error) {
                     console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
                     console.error(error.message);
-                    if (++errorCount > 3) {
+                    if (++errorCount >= 3) {
                         if (isDiscordEnabled) {
                             await Discord.smartContractResult(
                                 DISCORD_TOKEN,
@@ -220,7 +232,7 @@ async function main() {
         }
 
         if (isDiscordEnabled) {
-            await Discord.smartContractResult(
+            await Discord.generalAlert(
                 DISCORD_TOKEN,
                 DISCORD_CHANNEL_ID,
                 {
