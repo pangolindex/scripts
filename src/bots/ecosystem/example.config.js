@@ -34,6 +34,11 @@ const config = [
       MAX_GAS: 7000000,
       INTERVAL: 48 * 60 * 60 * 1000,
       INTERVAL_WINDOW: 6 * 60 * 60 * 1000,
+      LOW_BALANCE_THRESHOLD: '1000000000000000000',
+      DISCORD_ENABLED: false,
+      DISCORD_TOKEN: '',
+      DISCORD_CHANNEL_ID: '',
+      DISCORD_CHAIN_ID: '43114',
     },
   },
 ];

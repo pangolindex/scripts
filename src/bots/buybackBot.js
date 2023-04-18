@@ -1,8 +1,7 @@
 const axios = require('axios');
-const path = require('node:path');
-const fs = require('node:fs');
 const Web3 = require('web3');
 const ABI = require('../../config/abi.json');
+const Discord = require('./discord');
 
 
 // Variables
@@ -19,8 +18,13 @@ const SLIPPAGE_BIPS = Number.parseInt(process.env.SLIPPAGE_BIPS);
 const MAX_GAS = Number.parseInt(process.env.MAX_GAS);
 const INTERVAL = Number.parseInt(process.env.INTERVAL);
 const INTERVAL_WINDOW = Number.parseInt(process.env.INTERVAL_WINDOW);
+const LOW_BALANCE_THRESHOLD = process.env.LOW_BALANCE_THRESHOLD;
 const TX_MAX_FEE = process.env.TX_MAX_FEE;
 const TX_MAX_PRIORITY_FEE = process.env.TX_MAX_PRIORITY_FEE;
+const DISCORD_ENABLED = process.env.DISCORD_ENABLED;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const DISCORD_CHAIN_ID = process.env.DISCORD_CHAIN_ID;
 // --------------------------------------------------
 if (!RPC) {
     throw new Error('Invalid RPC');
@@ -46,11 +50,17 @@ if (!Web3.utils.isAddress(WRAPPED_NATIVE_CURRENCY)) {
 if (!Web3.utils.isAddress(PNG)) {
     throw new Error('Invalid PNG');
 }
+if (DISCORD_ENABLED === 'true') {
+    if ((!!DISCORD_TOKEN && !DISCORD_CHANNEL_ID) || (!DISCORD_TOKEN && !!DISCORD_CHANNEL_ID)) {
+        throw new Error('DISCORD_TOKEN and DISCORD_CHANNEL_ID are jointly required');
+    }
+}
 // --------------------------------------------------
 
 
 const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
 web3.eth.accounts.wallet.add(KEY);
+const isDiscordEnabled = DISCORD_ENABLED === 'true';
 
 // Globals to manage consistent scheduling with a window of variance
 // Do not touch these :)
@@ -63,7 +73,22 @@ harvestWrapper();
 async function harvestWrapper() {
     harvest()
         .then(scheduleNextHarvest)
-        .catch(console.error);
+        .catch(async (err) => {
+            console.error(err);
+            if (isDiscordEnabled) {
+                await Discord.smartContractResult(
+                    DISCORD_TOKEN,
+                    DISCORD_CHANNEL_ID,
+                    {
+                        title: 'Fatal Buyback Error',
+                        color: Discord.Colors.Red,
+                        message: err.message,
+                        link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                        chainId: DISCORD_CHAIN_ID,
+                    },
+                );
+            }
+        });
 }
 
 async function harvest() {
@@ -183,35 +208,49 @@ async function harvest() {
         pngReceived.muln(10000 - SLIPPAGE_BIPS).divn(10000), // minPng
     );
 
-    console.log(`Encoding bytecode ...`);
-    const bytecode = tx.encodeABI();
-    const fileName = path.basename(__filename, '.js');
-    const fileOutput = path.join(__dirname, `${fileName}-bytecode.txt`);
-    fs.writeFileSync(fileOutput, bytecode);
-    console.log(`Encoded bytecode to ${fileOutput}`);
-    console.log();
-
-    let receipt;
-
     const gas = await tx.estimateGas({ from: WALLET });
     const baseGasPrice = await web3.eth.getGasPrice();
 
     console.log('Sending harvest() ...');
-    receipt = await tx.send({
+    const receipt = await tx.send({
         from: WALLET,
         gas: gas,
         maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
         maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
     });
+    console.log(`Sending harvest() hash: ${receipt.transactionHash}`);
 
-    if (!receipt?.status) {
-        console.log(receipt);
-        process.exit(1);
-    } else {
-        console.log(`Transaction hash: ${receipt.transactionHash}`);
+    if (isDiscordEnabled) {
+        await Discord.smartContractResult(
+            DISCORD_TOKEN,
+            DISCORD_CHANNEL_ID,
+            {
+                title: 'Buyback Completed',
+                color: Discord.Colors.Green,
+                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                chainId: DISCORD_CHAIN_ID,
+            },
+        );
     }
 
-    console.log();
+    if (LOW_BALANCE_THRESHOLD) {
+        const balance = await web3.eth.getBalance(WALLET).then(web3.utils.toBN);
+        if (balance.lt(Web3.utils.toBN(LOW_BALANCE_THRESHOLD))) {
+            console.log(`Low balance detected of ${balance.toString()}`);
+            if (isDiscordEnabled) {
+                await Discord.lowBalance(
+                    DISCORD_TOKEN,
+                    DISCORD_CHANNEL_ID,
+                    {
+                        walletAddress: WALLET,
+                        walletName: 'Buyback Bot',
+                        link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                        chainId: DISCORD_CHAIN_ID,
+                    },
+                );
+            }
+        }
+    }
 }
 
 function scheduleNextHarvest() {

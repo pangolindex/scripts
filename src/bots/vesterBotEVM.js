@@ -125,10 +125,12 @@ async function main() {
                 console.error(error.message);
                 if (++errorCount >= 3) {
                     if (isDiscordEnabled) {
-                        await Discord.smartContractError(
+                        await Discord.smartContractResult(
                             DISCORD_TOKEN,
                             DISCORD_CHANNEL_ID,
                             {
+                                title: 'Vesting Error',
+                                color: Discord.Colors.Red,
                                 methodTo: vestContract._address,
                                 methodName: `${vestMethod}()`,
                                 message: error.message,
@@ -166,6 +168,8 @@ async function main() {
                                     DISCORD_TOKEN,
                                     DISCORD_CHANNEL_ID,
                                     {
+                                        title: 'Safe Diversion Triggered',
+                                        color: Discord.Colors.Grey,
                                         message: `Skipped ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`,
                                         link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
                                         chainId: DISCORD_CHAIN_ID,
@@ -194,10 +198,12 @@ async function main() {
                     console.error(error.message);
                     if (++errorCount > 3) {
                         if (isDiscordEnabled) {
-                            await Discord.smartContractError(
+                            await Discord.smartContractResult(
                                 DISCORD_TOKEN,
                                 DISCORD_CHANNEL_ID,
                                 {
+                                    title: 'Emission Diversion Error',
+                                    color: Discord.Colors.Red,
                                     methodTo: diversionContract._address,
                                     methodName: `${diversionMethod}(${EMISSION_DIVERSION_PID})`,
                                     message: error.message,
@@ -214,10 +220,13 @@ async function main() {
         }
 
         if (isDiscordEnabled) {
-            await Discord.vestingCompleted(
+            await Discord.smartContractResult(
                 DISCORD_TOKEN,
                 DISCORD_CHANNEL_ID,
                 {
+                    title: 'Vesting Completed',
+                    color: Discord.Colors.Green,
+                    link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
                     chainId: DISCORD_CHAIN_ID,
                 },
             );
