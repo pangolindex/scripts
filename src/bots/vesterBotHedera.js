@@ -150,7 +150,7 @@ async function main() {
                 tx = await new ContractInfoQuery()
                     .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
                     .execute(client);
-                const pngBalance = tx.tokenRelationships.get(AccountId.fromSolidityAddress(PNG_HTS_ADDRESS).toString()).balance;
+                pngBalance = tx.tokenRelationships.get(AccountId.fromSolidityAddress(PNG_HTS_ADDRESS).toString()).balance;
                 console.log(`Fetching balance of RewardFundingForwarder (PangoChef): ${pngBalance.toString()}`);
                 break;
             } catch (error) {
