@@ -114,35 +114,43 @@ const generateAddressLink = (address, chainId) => {
             return `https://evm.evmos.dev/address/${address}`;
         case '9001':
             return `https://escan.live/address/${address}`;
+        case '295':
+            return `https://hashscan.io/mainnet/account/${address}`;
+        case '294':
+            return `https://hashscan.io/testnet/account/${address}`;
         case '1':
             return `https://etherscan.io/address/${address}`;
         default:
-            return address;
+            return `https://pangolin.exchange/404/${chainId}/${address}`; // Ensure url is returned
     }
 };
 
-const generateTransactionLink = (address, chainId) => {
+const generateTransactionLink = (hash, chainId) => {
     switch (chainId.toString()) {
         case '43113':
-            return `https://testnet.snowtrace.io/tx/${address}`;
+            return `https://testnet.snowtrace.io/tx/${hash}`;
         case '43114':
-            return `https://snowtrace.io/tx/${address}`;
+            return `https://snowtrace.io/tx/${hash}`;
         case '19':
-            return `https://songbird-explorer.flare.network/tx/${address}`;
+            return `https://songbird-explorer.flare.network/tx/${hash}`;
         case '14':
-            return `https://flare-explorer.flare.network/tx/${address}`;
+            return `https://flare-explorer.flare.network/tx/${hash}`;
         case '16':
-            return `https://coston-explorer.flare.network/tx/${address}`;
+            return `https://coston-explorer.flare.network/tx/${hash}`;
         case '114':
-            return `https://coston2-explorer.flare.network/tx/${address}`;
+            return `https://coston2-explorer.flare.network/tx/${hash}`;
         case '9000':
-            return `https://evm.evmos.dev/tx/${address}`;
+            return `https://evm.evmos.dev/tx/${hash}`;
         case '9001':
-            return `https://escan.live/tx/${address}`;
+            return `https://escan.live/tx/${hash}`;
+        case '295':
+            return `https://hashscan.io/mainnet/transactionsById/${hash}`;
+        case '294':
+            return `https://hashscan.io/testnet/transactionsById/${hash}`;
         case '1':
-            return `https://etherscan.io/tx/${address}`;
+            return `https://etherscan.io/tx/${hash}`;
         default:
-            return address;
+            return `https://pangolin.exchange/404/${chainId}/${hash}`; // Ensure url is returned
     }
 };
 
