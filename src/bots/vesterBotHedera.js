@@ -1,5 +1,6 @@
 const Web3 = require('web3');
-const {Client, ContractExecuteTransaction, AccountId, ContractFunctionParameters, ContractInfoQuery, PrivateKey, ContractCallQuery} = require('@hashgraph/sdk');
+const {Client, ContractExecuteTransaction, AccountId, ContractFunctionParameters, ContractInfoQuery, PrivateKey, ContractCallQuery, AccountBalanceQuery} = require('@hashgraph/sdk');
+const Discord = require('./discord');
 
 // Variables
 // --------------------------------------------------
@@ -11,6 +12,11 @@ const TREASURY_VESTER = process.env.TREASURY_VESTER;
 const REWARD_FUNDING_FORWARDER = process.env.REWARD_FUNDING_FORWARDER;
 const EMISSION_DIVERSION = process.env.EMISSION_DIVERSION;
 const EMISSION_DIVERSION_PID = process.env.EMISSION_DIVERSION_PID;
+const LOW_BALANCE_THRESHOLD = process.env.LOW_BALANCE_THRESHOLD;
+const DISCORD_ENABLED = process.env.DISCORD_ENABLED;
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const DISCORD_CHAIN_ID = process.env.DISCORD_CHAIN_ID;
 // --------------------------------------------------
 if (!WALLET || !Web3.utils.isAddress(WALLET)) {
     throw new Error('Invalid WALLET');
@@ -36,9 +42,15 @@ if (!!EMISSION_DIVERSION && !Web3.utils.isAddress(EMISSION_DIVERSION)) {
 if (!!EMISSION_DIVERSION && !EMISSION_DIVERSION_PID) {
     throw new Error('EMISSION_DIVERSION and EMISSION_DIVERSION_PID are jointly required');
 }
+if (DISCORD_ENABLED === 'true') {
+    if ((!!DISCORD_TOKEN && !DISCORD_CHANNEL_ID) || (!DISCORD_TOKEN && !!DISCORD_CHANNEL_ID)) {
+        throw new Error('DISCORD_TOKEN and DISCORD_CHANNEL_ID are jointly required');
+    }
+}
 // --------------------------------------------------
 
 
+const isDiscordEnabled = DISCORD_ENABLED === 'true';
 const myAccountId = AccountId.fromSolidityAddress(WALLET).toString();
 const myPrivateKey = PrivateKey.fromStringED25519(KEY);
 let client;
@@ -52,9 +64,21 @@ const DAY = Web3.utils.toBN(86_400 * 1_000);
 
 main()
   .then(() => process.exit(0))
-  .catch(error => {
+  .catch(async (error) => {
       console.error(error);
-      process.exit(1);
+      if (isDiscordEnabled) {
+          await Discord.generalAlert(
+              DISCORD_TOKEN,
+              DISCORD_CHANNEL_ID,
+              {
+                  title: 'Fatal Vesting Bot Error',
+                  color: Discord.Colors.Red,
+                  message: error.message,
+                  link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                  chainId: DISCORD_CHAIN_ID,
+              },
+          );
+      }
   });
 
 async function main() {
@@ -77,8 +101,11 @@ async function main() {
             await sleep(delay.add(SECOND), true);
         }
 
+        // Used for retries
+        let errorCount;
+
         // Distribute funds
-        let errorCount = 0;
+        errorCount = 0;
         while ((await getLastUpdatedTime()).eq(fundsLastAvailableBlockTime)) {
             try {
                 console.log(`Distributing daily funds ...`);
@@ -93,43 +120,174 @@ async function main() {
             } catch (error) {
                 console.error(`Error attempting distribute()`);
                 console.error(error.message);
-                if (++errorCount >= 5) {
+                if (++errorCount >= 3) {
+                    if (isDiscordEnabled) {
+                        await Discord.smartContractResult(
+                            DISCORD_TOKEN,
+                            DISCORD_CHANNEL_ID,
+                            {
+                                title: 'Distribute Error',
+                                color: Discord.Colors.Red,
+                                methodTo: TREASURY_VESTER,
+                                methodName: `distribute()`,
+                                message: error.message,
+                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                chainId: DISCORD_CHAIN_ID,
+                            },
+                        );
+                    }
                     throw new Error(`Maximum retry count (${errorCount}) exceeded`);
                 }
             }
         }
 
-        console.log(`Fetching balance of RewardFundingForwarder (PangoChef) ...`);
-        tx = await new ContractInfoQuery()
-            .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
-            .execute(client);
-        const pngBalance = tx.tokenRelationships.get(AccountId.fromSolidityAddress(PNG_HTS_ADDRESS).toString()).balance;
-        console.log(`Fetching balance of RewardFundingForwarder (PangoChef): ${pngBalance.toString()}`);
+        // Fetch balance of RewardFundingForwarder
+        let pngBalance;
+        errorCount = 0;
+        while (true) {
+            try {
+                console.log(`Fetching balance of RewardFundingForwarder (PangoChef) ...`);
+                tx = await new ContractInfoQuery()
+                    .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
+                    .execute(client);
+                const pngBalance = tx.tokenRelationships.get(AccountId.fromSolidityAddress(PNG_HTS_ADDRESS).toString()).balance;
+                console.log(`Fetching balance of RewardFundingForwarder (PangoChef): ${pngBalance.toString()}`);
+                break;
+            } catch (error) {
+                console.error(`Error fetching balance of RewardFundingForwarder (PangoChef)`);
+                console.error(error.message);
+                if (++errorCount >= 3) {
+                    if (isDiscordEnabled) {
+                        await Discord.smartContractResult(
+                            DISCORD_TOKEN,
+                            DISCORD_CHANNEL_ID,
+                            {
+                                title: 'Fetching Balance of RewardFundingForwarder',
+                                color: Discord.Colors.Red,
+                                message: error.message,
+                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                chainId: DISCORD_CHAIN_ID,
+                            },
+                        );
+                    }
+                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                }
+            }
+        }
 
-        console.log(`Forwarding PangoChef funding ...`);
-        tx = await new ContractExecuteTransaction()
-            .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
-            .setGas(160_000)
-            .setFunction('notifyRewardAmount',
-                new ContractFunctionParameters()
-                    .addUint256(pngBalance.toNumber())
-            )
-            .execute(client);
-        record = await tx.getRecord(client);
-        console.log(`Forwarding PangoChef funding hash: ${record.transactionId.toString()}`);
+        // Forward funds to PangoChef
+        errorCount = 0;
+        while (true) {
+            try {
+                console.log(`Forwarding PangoChef funding ...`);
+                tx = await new ContractExecuteTransaction()
+                    .setContractId(AccountId.fromSolidityAddress(REWARD_FUNDING_FORWARDER).toString())
+                    .setGas(160_000)
+                    .setFunction('notifyRewardAmount',
+                        new ContractFunctionParameters()
+                            .addUint256(pngBalance.toNumber())
+                    )
+                    .execute(client);
+                record = await tx.getRecord(client);
+                console.log(`Forwarding PangoChef funding hash: ${record.transactionId.toString()}`);
+                break;
+            } catch (error) {
+                console.error(`Error forwarding PangoChef funding`);
+                console.error(error.message);
+                if (++errorCount >= 3) {
+                    if (isDiscordEnabled) {
+                        await Discord.smartContractResult(
+                            DISCORD_TOKEN,
+                            DISCORD_CHANNEL_ID,
+                            {
+                                title: 'Forwarding PangoChef Funding',
+                                color: Discord.Colors.Red,
+                                methodTo: REWARD_FUNDING_FORWARDER,
+                                methodName: `notifyRewardAmount(${pngBalance.toString()})`,
+                                message: error.message,
+                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                chainId: DISCORD_CHAIN_ID,
+                            },
+                        );
+                    }
+                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                }
+            }
+        }
 
-        if (isDiversionEnabled) {
-            console.log(`Forwarding StakingPositions funding ...`);
-            tx = await new ContractExecuteTransaction()
-                .setContractId(AccountId.fromSolidityAddress(EMISSION_DIVERSION).toString())
-                .setGas(325_000)
-                .setFunction('claimAndAddReward',
-                    new ContractFunctionParameters()
-                        .addUint256(parseInt(EMISSION_DIVERSION_PID))
-                )
+        // Forward funds to SSS
+        errorCount = 0;
+        while (isDiversionEnabled) {
+            try {
+                console.log(`Forwarding StakingPositions funding ...`);
+                tx = await new ContractExecuteTransaction()
+                    .setContractId(AccountId.fromSolidityAddress(EMISSION_DIVERSION).toString())
+                    .setGas(325_000)
+                    .setFunction('claimAndAddReward',
+                        new ContractFunctionParameters()
+                            .addUint256(parseInt(EMISSION_DIVERSION_PID))
+                    )
+                    .execute(client);
+                record = await tx.getRecord(client);
+                console.log(`Forwarding StakingPositions funding hash: ${record.transactionId.toString()}`);
+                break;
+            } catch (error) {
+                console.error(`Error forwarding StakingPositions funding`);
+                console.error(error.message);
+                if (++errorCount >= 3) {
+                    if (isDiscordEnabled) {
+                        await Discord.smartContractResult(
+                            DISCORD_TOKEN,
+                            DISCORD_CHANNEL_ID,
+                            {
+                                title: 'Forwarding StakingPositions Funding',
+                                color: Discord.Colors.Red,
+                                methodTo: EMISSION_DIVERSION,
+                                methodName: `claimAndAddReward(${EMISSION_DIVERSION_PID})`,
+                                message: error.message,
+                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                chainId: DISCORD_CHAIN_ID,
+                            },
+                        );
+                    }
+                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                }
+            }
+        }
+
+        if (isDiscordEnabled) {
+            await Discord.generalAlert(
+                DISCORD_TOKEN,
+                DISCORD_CHANNEL_ID,
+                {
+                    title: 'Vesting Completed',
+                    color: Discord.Colors.Green,
+                    link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                    chainId: DISCORD_CHAIN_ID,
+                },
+            );
+        }
+
+        if (LOW_BALANCE_THRESHOLD) {
+            tx = await new AccountBalanceQuery()
+                .setAccountId(myAccountId)
                 .execute(client);
-            record = await tx.getRecord(client);
-            console.log(`Forwarding StakingPositions funding hash: ${record.transactionId.toString()}`);
+            const balance = Web3.utils.toBN(tx.hbars.toTinybars().toString());
+            if (balance.lt(Web3.utils.toBN(LOW_BALANCE_THRESHOLD))) {
+                console.log(`Low balance detected of ${balance.toString()}`);
+                if (isDiscordEnabled) {
+                    await Discord.lowBalance(
+                        DISCORD_TOKEN,
+                        DISCORD_CHANNEL_ID,
+                        {
+                            walletAddress: WALLET,
+                            walletName: 'Vester Bot',
+                            link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                            chainId: DISCORD_CHAIN_ID,
+                        },
+                    );
+                }
+            }
         }
 
         // Fixed delay to allow chain data via potentially slower nodes to update
