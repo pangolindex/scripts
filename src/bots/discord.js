@@ -1,9 +1,9 @@
 const {Colors, Client, EmbedBuilder, GatewayIntentBits} = require('discord.js');
-const client = new Client({
-    intents: [GatewayIntentBits.Guilds],
-});
 
 const lowBalance = async (discord_token, discord_channel_id, {title = 'Low Balance', link, walletAddress, walletName, tokenAddress, message, chainId, color = Colors.Yellow, roleIds = []} = {}) => {
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds],
+    });
     return new Promise((resolve, reject) => {
         client
             .on('ready', async () => {
@@ -35,6 +35,9 @@ const lowBalance = async (discord_token, discord_channel_id, {title = 'Low Balan
 };
 
 const smartContractResult = async (discord_token, discord_channel_id, {title = 'Smart Contract Result', link, transactionHashes = [], methodFrom, methodTo, methodName, message, chainId, color = Colors.Green, roleIds = []} = {}) => {
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds],
+    });
     return new Promise((resolve, reject) => {
         client
             .on('ready', async () => {
@@ -72,6 +75,9 @@ const smartContractResult = async (discord_token, discord_channel_id, {title = '
 };
 
 const generalAlert = async (discord_token, discord_channel_id, {title = 'Alert', link, message, chainId, color = Colors.Grey, roleIds = []} = {}) => {
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds],
+    });
     return new Promise((resolve, reject) => {
         client
             .on('ready', async () => {
