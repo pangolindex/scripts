@@ -63,6 +63,9 @@ const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
 web3.eth.accounts.wallet.add(KEY);
 const isDiscordEnabled = DISCORD_ENABLED === 'true';
 
+const SECOND = Web3.utils.toBN(1000);
+const DAY = Web3.utils.toBN(86400000);
+
 main()
   .then(() => process.exit(0))
   .catch(async (error) => {
@@ -80,6 +83,7 @@ main()
               },
           );
       }
+      process.exit(1);
   });
 
 async function main() {
@@ -92,8 +96,6 @@ async function main() {
     const safeFunder = new web3.eth.Contract(ABI.SAFE_FUNDER_FOR_PANGOLIN_STAKING_POSITIONS, SAFE_FUNDER);
     const vestContract = isProxyEnabled ? treasuryVesterProxy : treasuryVester;
     const vestMethod = isProxyEnabled ? 'claimAndDistribute' : 'distribute';
-    const SECOND = Web3.utils.toBN(1000);
-    const DAY = Web3.utils.toBN(86400000);
 
     while (true) {
         // Gather info
@@ -111,102 +113,27 @@ async function main() {
             await sleep(delay.add(SECOND), true);
         }
 
-        // Used for retries
-        let errorCount;
-
         // Vest funds
-        errorCount = 0;
-        while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
-            try {
-                console.log(`Calculating parameters for ${vestMethod}() ...`);
-                const tx = vestContract.methods[vestMethod]();
-                const gas = await tx.estimateGas({ from: WALLET });
-                const baseGasPrice = await web3.eth.getGasPrice();
-
-                console.log(`Sending ${vestMethod}() ...`);
-                const receipt = await tx.send({
-                    from: WALLET,
-                    gas,
-                    maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
-                    maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
-                });
-                console.log(`Sending ${vestMethod}() hash: ${receipt.transactionHash}`);
-                break;
-            } catch (error) {
-                console.error(`Error attempting ${vestMethod}()`);
-                console.error(error.message);
-                if (++errorCount >= 3) {
-                    if (isDiscordEnabled) {
-                        await Discord.smartContractResult(
-                            DISCORD_TOKEN,
-                            DISCORD_CHANNEL_ID,
-                            {
-                                title: 'Vesting Error',
-                                color: Discord.Colors.Red,
-                                methodTo: vestContract._address,
-                                methodName: `${vestMethod}()`,
-                                message: error.message,
-                                link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
-                                chainId: DISCORD_CHAIN_ID,
-                            },
-                        );
-                    }
-                    throw new Error(`Maximum retry count (${errorCount}) exceeded`);
-                }
-                await sleep(SECOND.muln(5));
-            }
-        }
-
-        // Fund chef
-        errorCount = 0;
-        if (isEmissionDiversionEnabled || isSafeDiversionEnabled) {
-            const diversionContract = isEmissionDiversionEnabled ? emissionDiversion : safeFunder;
-            const diversionMethod = isEmissionDiversionEnabled ? 'claimAndAddReward' : 'claimAndAddRewardUsingDiverter';
-
-            while (true) {
+        vestFunds: {
+            let errorCount = 0;
+            while (web3.utils.toBN(await treasuryVester.methods.lastUpdate().call()).eq(fundsLastAvailableBlockTime)) {
                 try {
-                    console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
-                    const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
-
-                    let gas;
-                    try {
-                        gas = await tx.estimateGas({ from: WALLET });
-                    } catch (gasEstimationError) {
-                        // Gracefully handle overflow detections when using safe diverter
-                        if (isSafeDiversionEnabled && gasEstimationError.message.includes('execution reverted: OVERFLOW')) {
-                            console.log(`Skipping ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`);
-                            if (isDiscordEnabled) {
-                                await Discord.generalAlert(
-                                    DISCORD_TOKEN,
-                                    DISCORD_CHANNEL_ID,
-                                    {
-                                        title: 'Safe Diversion Triggered',
-                                        color: Discord.Colors.Grey,
-                                        message: `Skipped ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`,
-                                        link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
-                                        chainId: DISCORD_CHAIN_ID,
-                                    },
-                                );
-                            }
-                            break;
-                        } else {
-                            throw gasEstimationError;
-                        }
-                    }
-
+                    console.log(`Calculating parameters for ${vestMethod}() ...`);
+                    const tx = vestContract.methods[vestMethod]();
+                    const gas = await tx.estimateGas({ from: WALLET });
                     const baseGasPrice = await web3.eth.getGasPrice();
 
-                    console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                    console.log(`Sending ${vestMethod}() ...`);
                     const receipt = await tx.send({
                         from: WALLET,
                         gas,
                         maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
                         maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
                     });
-                    console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) hash: ${receipt.transactionHash}`);
-                    break;
+                    console.log(`Sending ${vestMethod}() hash: ${receipt.transactionHash}`);
+                    break vestFunds;
                 } catch (error) {
-                    console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
+                    console.error(`Error attempting ${vestMethod}()`);
                     console.error(error.message);
                     if (++errorCount >= 3) {
                         if (isDiscordEnabled) {
@@ -214,10 +141,10 @@ async function main() {
                                 DISCORD_TOKEN,
                                 DISCORD_CHANNEL_ID,
                                 {
-                                    title: 'Emission Diversion Error',
+                                    title: 'Vesting Error',
                                     color: Discord.Colors.Red,
-                                    methodTo: diversionContract._address,
-                                    methodName: `${diversionMethod}(${EMISSION_DIVERSION_PID})`,
+                                    methodTo: vestContract._address,
+                                    methodName: `${vestMethod}()`,
                                     message: error.message,
                                     link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
                                     chainId: DISCORD_CHAIN_ID,
@@ -227,6 +154,82 @@ async function main() {
                         throw new Error(`Maximum retry count (${errorCount}) exceeded`);
                     }
                     await sleep(SECOND.muln(5));
+                }
+            }
+        }
+
+        // Fund chef
+        fundChef: {
+            let errorCount = 0;
+            if (isEmissionDiversionEnabled || isSafeDiversionEnabled) {
+                const diversionContract = isEmissionDiversionEnabled ? emissionDiversion : safeFunder;
+                const diversionMethod = isEmissionDiversionEnabled ? 'claimAndAddReward' : 'claimAndAddRewardUsingDiverter';
+
+                while (true) {
+                    try {
+                        console.log(`Calculating parameters for ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                        const tx = diversionContract.methods[diversionMethod](EMISSION_DIVERSION_PID);
+
+                        let gas;
+                        try {
+                            gas = await tx.estimateGas({ from: WALLET });
+                        } catch (gasEstimationError) {
+                            // Gracefully handle overflow detections when using safe diverter
+                            if (isSafeDiversionEnabled && gasEstimationError.message.includes('execution reverted: OVERFLOW')) {
+                                console.log(`Skipping ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`);
+                                if (isDiscordEnabled) {
+                                    await Discord.generalAlert(
+                                        DISCORD_TOKEN,
+                                        DISCORD_CHANNEL_ID,
+                                        {
+                                            title: 'Safe Diversion Triggered',
+                                            color: Discord.Colors.Grey,
+                                            message: `Skipped ${diversionMethod}(${EMISSION_DIVERSION_PID}) due to OVERFLOW`,
+                                            link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                            chainId: DISCORD_CHAIN_ID,
+                                        },
+                                    );
+                                }
+                                break fundChef;
+                            } else {
+                                throw gasEstimationError;
+                            }
+                        }
+
+                        const baseGasPrice = await web3.eth.getGasPrice();
+
+                        console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) ...`);
+                        const receipt = await tx.send({
+                            from: WALLET,
+                            gas,
+                            maxFeePerGas: TX_MAX_FEE || baseGasPrice * 2,
+                            maxPriorityFeePerGas: TX_MAX_PRIORITY_FEE || web3.utils.toWei('1', 'nano'),
+                        });
+                        console.log(`Sending ${diversionMethod}(${EMISSION_DIVERSION_PID}) hash: ${receipt.transactionHash}`);
+                        break fundChef;
+                    } catch (error) {
+                        console.error(`Error attempting ${diversionMethod}(${EMISSION_DIVERSION_PID})`);
+                        console.error(error.message);
+                        if (++errorCount >= 3) {
+                            if (isDiscordEnabled) {
+                                await Discord.smartContractResult(
+                                    DISCORD_TOKEN,
+                                    DISCORD_CHANNEL_ID,
+                                    {
+                                        title: 'Emission Diversion Error',
+                                        color: Discord.Colors.Red,
+                                        methodTo: diversionContract._address,
+                                        methodName: `${diversionMethod}(${EMISSION_DIVERSION_PID})`,
+                                        message: error.message,
+                                        link: Discord.generateAddressLink(WALLET, DISCORD_CHAIN_ID),
+                                        chainId: DISCORD_CHAIN_ID,
+                                    },
+                                );
+                            }
+                            throw new Error(`Maximum retry count (${errorCount}) exceeded`);
+                        }
+                        await sleep(SECOND.muln(5));
+                    }
                 }
             }
         }
