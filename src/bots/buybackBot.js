@@ -1,6 +1,6 @@
 const axios = require('axios');
 const Web3 = require('web3');
-const ABI = require('../../config/abi.json');
+const ABI = require('./abi.json');
 const Discord = require('./discord');
 
 
