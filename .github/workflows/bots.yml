@@ -1,0 +1,28 @@
+name: Bots
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+    - 'src/bots'
+    - '!src/bots/*.md'
+
+jobs:
+  build:
+    name: Build bot image
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - uses: RafikFarhad/push-to-gcr-github-action@v4.1
+      with:
+        gcloud_service_key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+        registry: us.gcr.io
+        project_id: pango-prod
+        image_name: bots
+        image_tag: ${{ env.GITHUB_SHA }}
+        context: ./src/bots
