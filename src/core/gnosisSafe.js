@@ -123,9 +123,25 @@ const execute = async ({ multisigAddress, safeTxHash }) => {
     return new Promise((resolve) => result.promiEvent.once('receipt', resolve));
 };
 
+const owners = async ({ multisigAddress }) => {
+    const adapter = new Web3Adapter({
+        web3,
+        signerAddress: '0x0000000000000000000000000000000000000000', // web3.eth.accounts.wallet[0].address,
+    });
+
+    const safeSdk = await Safe.create({
+        ethAdapter: adapter,
+        safeAddress: multisigAddress,
+    });
+
+    const owners = await safeSdk.getOwners();
+    return owners;
+};
+
 module.exports = {
     propose,
     confirm,
     revoke,
     execute,
+    owners,
 };
