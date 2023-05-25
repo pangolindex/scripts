@@ -147,10 +147,17 @@ const execute = async ({ multisigAddress, id, nonce }) => {
     return tx.send(txConfig);
 };
 
+const owners = async ({ multisigAddress }) => {
+    const multisigContract = new web3.eth.Contract(ABI.GNOSIS_MULTISIG, multisigAddress);
+    const owners = await multisigContract.methods.getOwners().call();
+    return owners;
+};
+
 module.exports = {
     propose,
     confirm,
     revoke,
     verify,
     execute,
+    owners,
 };
