@@ -23,6 +23,7 @@
     "@gnosis.pm/safe-core-sdk-types": "1.0.0",
     "@gnosis.pm/safe-service-client": "1.1.1",
     "@gnosis.pm/safe-web3-lib": "1.0.0",
+    "@hashgraph/sdk": "2.30.0",
     "@pangolindex/exchange-contracts": "2.1.8",
     "@pangolindex/sdk": "3.1.6",
     "abi-decoder": "2.4.0",
