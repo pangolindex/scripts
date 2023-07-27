@@ -15,40 +15,15 @@ const mainnetPrivateKey = process.env.HEDERA_MAINNET_PRIVATEKEY;
 const testnetAccount = process.env.HEDERA_TESTNET_ACCOUNT;
 const testnetPrivateKey = process.env.HEDERA_TESTNET_PRIVATEKEY;
 
-/**
- * Class representing a multisig hedera wallet with some useful functions
- * to interact with pangolin contracts
- */
-class HederaMultisig {
-  address;
+class Wallet {
+  constructor() {}
+
+  /** @type  {AccountId}*/
   accountId;
+  /** @type {Client} */
   client;
+  /** @type {'mainnet' | 'testnet'} */
   chain;
-
-  /**
-   * @param {string} multisigAddress Adddress of multisig
-   * @param {'mainnet' | 'testnet' | undefined} chain
-   */
-  constructor(multisigAddress, chain = "mainnet") {
-    this.address = multisigAddress;
-    this.chain = chain;
-    this.client =
-      chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
-
-    this.accountId = AccountId.fromSolidityAddress(this.address);
-
-    const account = chain === "mainnet" ? mainnetAccount : testnetAccount;
-    const privateKey =
-    chain === "mainnet" ? mainnetPrivateKey : testnetPrivateKey;
-
-    if (!account || !privateKey) {
-      throw new Error(`Set ${chain} account or private key in our env file`);
-    }
-
-    const accountId = this.toAccountId(account);
-    this.client.setOperator(accountId, privateKey);
-  }
-
   /**
    * This function send a transaction to hedera
    * @param {Transaction} transaction
@@ -115,14 +90,16 @@ class HederaMultisig {
 
   /**
    * Function to associate with the  token
-   * @param {string} tokenAddress Token address
+   * @param {string[]} tokenAddresses Token address
    */
-  async tokenAssociate(tokenAddress) {
-    const tokenId = this.toTokenId(tokenAddress);
-    const transaction = new TokenAssociateTransaction(
-      [tokenId],
-      this.accountId
+  async tokenAssociate(tokenAddresses) {
+    const tokenIds = tokenAddresses.map((tokenAddress) =>
+      this.toTokenId(tokenAddress)
     );
+    const transaction = new TokenAssociateTransaction();
+    transaction.setAccountId(this.accountId);
+    transaction.setTokenIds(tokenIds);
+
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(`Success to Associate to token ${tokenId.toString()}.`);
@@ -205,7 +182,7 @@ class HederaMultisig {
     // Create a transaction to transfer Token to recipient
     const transaction = new TransferTransaction();
     let message = "Success to Transfer: \n";
-    for (let index = 0; index < array.length; index++) {
+    for (let index = 0; index < tokenAddresses.length; index++) {
       const amount = amounts[index];
       const recipientId = this.toAccountId(recipients[index]);
       const tokenId = this.toTokenId(tokenAddresses[index]);
@@ -221,3 +198,105 @@ class HederaMultisig {
     }
   }
 }
+
+/**
+ * Class representing a multisig hedera wallet with some useful functions
+ * to interact with pangolin contracts
+ */
+class HederaMultisigWallet extends Wallet {
+  /**@type {string} */
+  address;
+
+  /**
+   * @constructor
+   * @param {string} multisigAddress Adddress of multisig
+   * @param {'mainnet' | 'testnet' | undefined} chain
+   */
+  constructor(multisigAddress, chain = "mainnet") {
+    super();
+    this.address = multisigAddress;
+    this.chain = chain;
+    this.client =
+      chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
+
+    this.accountId = AccountId.fromSolidityAddress(this.address);
+
+    const userAccount = chain === "mainnet" ? mainnetAccount : testnetAccount;
+    const privateKey =
+      chain === "mainnet" ? mainnetPrivateKey : testnetPrivateKey;
+
+    if (!userAccount || !privateKey) {
+      throw new Error(`Set ${chain} account or private key in our env file`);
+    }
+
+    const userAccountId = this.toAccountId(userAccount);
+    this.client.setOperator(userAccountId, privateKey);
+  }
+
+  /**
+   * This function send a transaction to hedera
+   * @param {Transaction} transaction
+   * @returns {string | null}
+   */
+  async sendTransaction(transaction) {
+    try {
+      const executedTx = await transaction
+        .setTransactionId(TransactionId.generate(this.accountId))
+        .execute(this.client);
+
+      const txId = executedTx.transactionId.toString();
+      console.log(
+        `Transaction sent: https://hashscan.io/${this.chain}/transaction/${txId}`
+      );
+      return txId;
+    } catch (error) {
+      console.error("Error in sending transaction: ", error);
+      return null;
+    }
+  }
+}
+
+/**
+ * Class representing a single hedera wallet with some useful functions
+ * to interact with pangolin contracts
+ */
+class HederaWallet extends Wallet {
+  /**
+   * @constructor
+   * @param {'mainnet' | 'testnet' | undefined} chain
+   */
+  constructor(chain = "mainnet") {
+    super();
+    this.chain = chain;
+    this.client =
+      chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
+
+    const account = chain === "mainnet" ? mainnetAccount : testnetAccount;
+    const privateKey =
+      chain === "mainnet" ? mainnetPrivateKey : testnetPrivateKey;
+
+    if (!account || !privateKey) {
+      throw new Error(`Set ${chain} account or private key in our env file`);
+    }
+
+    this.accountId = this.toAccountId(account);
+
+    this.client.setOperator(this.accountId, privateKey);
+  }
+}
+
+async function main() {
+  const multisingWallet = new HederaMultisigWallet(
+    "0x000000000000000000000000000000000040b1eb",
+    "testnet"
+  );
+
+  const wallet = new HederaWallet("testnet");
+}
+
+main();
+
+module.exports = {
+  HederaMultisigWallet,
+  HederaWallet,
+};
