@@ -275,6 +275,46 @@ class Wallet {
       console.log(message);
     }
   }
+
+  /**
+   * This function wrap HBAR in WHBAR
+   * @param {string} whbarAddress Address of whbar contract
+   * @param {number} amount Amount of HBAR to wrap
+   */
+  async wrap(whbarAddress, amount) {
+    const whbarContractId = this.toContractId(whbarAddress);
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(whbarContractId)
+      .setFunction("deposit")
+      .setPayableAmount(new Hbar(amount))
+      .setGas(100_000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to wrap HBAR.");
+    }
+  }
+
+  /**
+   * This function unwrap WHBAR in HBAR
+   * @param {string} whbarAddress 
+   * @param {number} amount 
+   */
+  async unWrap(whbarAddress, amount) {
+    const whbarContractId = this.toContractId(whbarAddress);
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(whbarContractId)
+      .setFunction(
+        "withdraw",
+        new ContractFunctionParameters().addUint256(amount)
+      )
+      .setGas(1000_000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to unwrap WHBAR.");
+    }
+  }
 }
 
 /**
