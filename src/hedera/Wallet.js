@@ -216,7 +216,7 @@ class Wallet {
   }
 
   /**
-   * 
+   *
    * @param {string} pangoChefAddress Address of pangochef
    * @param {string} tokenAddress Address of fungible token in EVM format
    * @param {string} pairContract Address of pair contract in EVM format
@@ -229,7 +229,7 @@ class Wallet {
       .setFunction(
         "initializePool",
         new ContractFunctionParameters()
-          .addAddress(tokenAddress) // token address 
+          .addAddress(tokenAddress) // token address
           .addAddress(pairContract) // pair contract address
           .addUint8(1) // poolType
       )
@@ -238,6 +238,41 @@ class Wallet {
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log("Success in add a new farm.");
+    }
+  }
+
+  /**
+   *
+   * @param {string} pangoChefAddress Address of pangochef
+   * @param {number[]} poolsIds Array of pool ids
+   * @param {number[]} newWeights Array with new weights of each pool
+   */
+  async setWeights(pangoChefAddress, poolsIds, newWeights) {
+    if (poolsIds.length !== newWeights.length) {
+      throw new Error("The lengh of pool ids not is same of weights");
+    }
+
+    const pangoChefId = this.toContractId(pangoChefAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(pangoChefId)
+      .setFunction(
+        "setWeights",
+        new ContractFunctionParameters()
+          .addUint256Array(poolsIds) // poolIds
+          .addUint32Array(newWeights) // weights
+      )
+      .setGas(1_000_000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      let message = "Success to changed the weight of:\n";
+      for (let index = 0; index < poolsIds.length; index++) {
+        const poolId = poolsIds[index];
+        const weight = newWeights[index];
+        message += `pid: ${poolId} - weight: ${weight}\n`;
+      }
+      console.log(message);
     }
   }
 }
