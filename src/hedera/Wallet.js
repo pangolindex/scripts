@@ -10,6 +10,8 @@ const {
   Hbar,
 } = require("@hashgraph/sdk");
 
+require('dotenv').config()
+
 const mainnetAccount = process.env.HEDERA_MAINNET_ACCOUNT;
 const mainnetPrivateKey = process.env.HEDERA_MAINNET_PRIVATEKEY;
 const testnetAccount = process.env.HEDERA_TESTNET_ACCOUNT;
@@ -292,6 +294,8 @@ async function main() {
   );
 
   const wallet = new HederaWallet("testnet");
+
+  process.exit();
 }
 
 main();

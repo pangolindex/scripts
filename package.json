@@ -29,7 +29,7 @@
     "abi-decoder": "2.4.0",
     "axios": "0.25.0",
     "chalk": "4.1.2",
-    "dotenv": "16.0.2",
+    "dotenv": "^16.0.2",
     "hardhat": "2.7.0",
     "near-api-js": "0.45.1",
     "paraswap": "5.1.0",
