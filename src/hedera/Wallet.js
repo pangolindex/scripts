@@ -8,9 +8,12 @@ const {
   Transaction,
   TransferTransaction,
   Hbar,
+  ContractExecuteTransaction,
+  ContractId,
+  ContractFunctionParameters,
 } = require("@hashgraph/sdk");
 
-require('dotenv').config()
+require("dotenv").config();
 
 const mainnetAccount = process.env.HEDERA_MAINNET_ACCOUNT;
 const mainnetPrivateKey = process.env.HEDERA_MAINNET_PRIVATEKEY;
@@ -26,6 +29,7 @@ class Wallet {
   client;
   /** @type {'mainnet' | 'testnet'} */
   chain;
+
   /**
    * This function send a transaction to hedera
    * @param {Transaction} transaction
@@ -88,6 +92,17 @@ class Wallet {
     return this.isHederaIdValid(address)
       ? AccountId.fromString(address)
       : AccountId.fromSolidityAddress(address);
+  }
+
+  /**
+   * This function convert a string to ContractId instance
+   * @param {string} address
+   * @returns {ContractId}
+   */
+  toContractId(address) {
+    return this.isHederaIdValid(address)
+      ? ContractId.fromString(address)
+      : ContractId.fromSolidityAddress(address);
   }
 
   /**
@@ -199,6 +214,32 @@ class Wallet {
       console.log(message);
     }
   }
+
+  /**
+   * 
+   * @param {string} pangoChefAddress Address of pangochef
+   * @param {string} tokenAddress Address of fungible token in EVM format
+   * @param {string} pairContract Address of pair contract in EVM format
+   */
+  async addFarm(pangoChefAddress, tokenAddress, pairContract) {
+    const pangoChefId = this.toContractId(pangoChefAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(pangoChefId)
+      .setFunction(
+        "initializePool",
+        new ContractFunctionParameters()
+          .addAddress(tokenAddress) // token address 
+          .addAddress(pairContract) // pair contract address
+          .addUint8(1) // poolType
+      )
+      .setGas(1_000_000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success in add a new farm.");
+    }
+  }
 }
 
 /**
@@ -206,7 +247,7 @@ class Wallet {
  * to interact with pangolin contracts
  */
 class HederaMultisigWallet extends Wallet {
-  /**@type {string} */
+  /**@type {string} Address of multisig wallet in EVM format*/
   address;
 
   /**
@@ -233,28 +274,6 @@ class HederaMultisigWallet extends Wallet {
 
     const userAccountId = this.toAccountId(userAccount);
     this.client.setOperator(userAccountId, privateKey);
-  }
-
-  /**
-   * This function send a transaction to hedera
-   * @param {Transaction} transaction
-   * @returns {string | null}
-   */
-  async sendTransaction(transaction) {
-    try {
-      const executedTx = await transaction
-        .setTransactionId(TransactionId.generate(this.accountId))
-        .execute(this.client);
-
-      const txId = executedTx.transactionId.toString();
-      console.log(
-        `Transaction sent: https://hashscan.io/${this.chain}/transaction/${txId}`
-      );
-      return txId;
-    } catch (error) {
-      console.error("Error in sending transaction: ", error);
-      return null;
-    }
   }
 }
 
