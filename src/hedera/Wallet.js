@@ -326,24 +326,23 @@ class Wallet {
 
   /**
    * This function add new rewarder
-   * @param {string} pangoChefAddress 
-   * @param {number} poolId 
-   * @param {string} rewarder 
+   * @param {string} pangoChefAddress
+   * @param {number} poolId
+   * @param {string} rewarder
    */
-  async addRewarder(pangoChefAddress, poolId, rewarder){
+  async addRewarder(pangoChefAddress, poolId, rewarder) {
     const pangochefId = this.toContractId(pangoChefAddress);
     const transaction = new ContractExecuteTransaction()
-        .setContractId(pangochefId)
-        .setFunction('setRewarder',
-            new ContractFunctionParameters()
-                .addUint256(poolId)
-                .addAddress(rewarder)
-        )
-        .setGas(250_000);
+      .setContractId(pangochefId)
+      .setFunction(
+        "setRewarder",
+        new ContractFunctionParameters().addUint256(poolId).addAddress(rewarder)
+      )
+      .setGas(250_000);
 
     const txId = await this.sendTransaction(transaction);
-    if(txId){
-      console.log(`Success to add new rewarder to farm ${poolId}`)
+    if (txId) {
+      console.log(`Success to add new rewarder to farm ${poolId}`);
     }
   }
 
@@ -415,6 +414,135 @@ class Wallet {
       if (txId) {
         console.log(`Success to fund the rewarder ${rewarder}`);
       }
+    }
+  }
+
+  /**
+   * This function create a new propose to pangolin governance
+   * @param {string} governorAddress Address of governance contract
+   * @param {string[]} targets Array of target addresses
+   * @param {number[]} values Array of values target addresses
+   * @param {string[]} signatures Array of function signatures
+   * @param {Uint8Array[]} datas Array of args of functions
+   * @param {string} description Description of proposal
+   * @param {number} nftId Id of nft to use to create a new proposal
+   */
+  async submitProposal(
+    governorAddress,
+    targets,
+    values,
+    signatures,
+    datas,
+    description,
+    nftId
+  ) {
+    const governorId = this.toContractId(governorAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(governorId)
+      .setFunction(
+        "propose",
+        new ContractFunctionParameters()
+          .addAddressArray(targets) // targets
+          .addUint256Array(values) // values
+          .addStringArray(signatures) // signatures
+          .addBytesArray(datas) // datas
+          .addString(description) // description
+          .addInt64(nftId) // nftId
+      );
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to create a new propose");
+    }
+  }
+
+  /**
+   * This function execute a proposal
+   * @param {string} governorAddress Address of governance contract
+   * @param {number} proposalId Id of proposal
+   */
+  async executeProposal(governorAddress, proposalId) {
+    const governorId = this.toContractId(governorAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(governorId)
+      .setFunction(
+        "execute",
+        new ContractFunctionParameters().addUint64(proposalId)
+      );
+
+    const txId = transaction.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to execute the proposal");
+    }
+  }
+
+  /**
+   * This function queue a proposal to timelock
+   * @param {string} governorAddress Address of governance contract
+   * @param {number} proposalId Id of proposal
+   */
+  async queueProposal(governorAddress, proposalId) {
+    const governorId = this.toContractId(governorAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(governorId)
+      .setFunction(
+        "queue",
+        new ContractFunctionParameters().addUint64(proposalId)
+      );
+
+    const txId = transaction.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to queue the proposal");
+    }
+  }
+
+  /**
+   * This function cancel a proposal
+   * @param {string} governorAddress Address of governance contract
+   * @param {number} proposalId Id of proposal
+   */
+  async cancelProposal(governorAddress, proposalId) {
+    const governorId = this.toContractId(governorAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(governorId)
+      .setFunction(
+        "cancel",
+        new ContractFunctionParameters().addUint64(proposalId)
+      );
+
+    const txId = transaction.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to cancel the proposal");
+    }
+  }
+
+  /**
+   * This function vote a prosal
+   * @param {string} governorAddress Address of governance contract
+   * @param {number} proposalId Id of proposal
+   * @param {boolean} support If support the proposal, true for yes, false for no
+   * @param {number} nftId Id of nft to use to vote
+   */
+  async castVote(governorAddress, proposalId, support, nftId) {
+    const governorId = this.toContractId(governorAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(governorId)
+      .setFunction(
+        "castVote",
+        new ContractFunctionParameters()
+          .addUint64(proposalId)
+          .addBool(support)
+          .addAddress(nftId)
+      );
+
+    const txId = transaction.sendTransaction(transaction);
+    if (txId) {
+      console.log("Success to vote in the proposal");
     }
   }
 }
