@@ -168,7 +168,7 @@ class Wallet {
   }
 
   /**
-   * This function send a Token amount to account
+   * This function send a token amount to account
    * @param {string} tokenAddress
    * @param {string} recipient
    * @param {number} amount
@@ -186,11 +186,13 @@ class Wallet {
       console.log(
         `Success to Transfer ${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}.`
       );
+      return txId;
     }
+    return null;
   }
 
   /**
-   * This function send a Token amount to account
+   * This function send multiple tokens amounts to multiple accounts
    * @param {string[]} tokenAddresses
    * @param {string[]} recipients
    * @param {number[]} amounts
@@ -208,11 +210,13 @@ class Wallet {
         .addTokenTransfer(tokenId, recipientId, amount);
       message += `${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}; \n`;
     }
-
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(message);
+      return txId;
     }
+
+    return null;
   }
 
   /**
@@ -291,16 +295,18 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to wrap HBAR.");
+      console.log(`Success to wrap ${amount} HBAR.`);
+      return txId;
     }
+    return null;
   }
 
   /**
    * This function unwrap WHBAR in HBAR
-   * @param {string} whbarAddress 
-   * @param {number} amount 
+   * @param {string} whbarAddress Address of whbar contract
+   * @param {number} amount Amount of WHBAR to unwrap
    */
-  async unWrap(whbarAddress, amount) {
+  async unwrap(whbarAddress, amount) {
     const whbarContractId = this.toContractId(whbarAddress);
     const transaction = new ContractExecuteTransaction()
       .setContractId(whbarContractId)
@@ -312,7 +318,80 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to unwrap WHBAR.");
+      console.log(`Success to unwrap ${amount} WHBAR.`);
+      return txId;
+    }
+    return null;
+  }
+
+  /**
+   * This function wrap hbar to whbar and fund the rewarders with whbar
+   * @param {string} whbarAddress Address of whbar contract
+   * @param {string[]} rewarderAddresses Address of rewarders
+   * @param {number[]} amounts Amount to fund each rewarder
+   */
+  async fundRewardersWithWHBAR(whbarAddress, rewarderAddresses, amounts) {
+    if (rewarderAddresses.length !== amounts.length) {
+      throw new Error("The lengh of rewarders not is same of amounts");
+    }
+
+    const totalWHBAR = amounts.reduce((total, amount) => total + amount, 0);
+
+    const wrapTxId = await this.wrap(whbarAddress, totalWHBAR);
+
+    if (wrapTxId) {
+      /** @type {string[]}*/
+      const whbarAddressArray = new Array(rewarderAddresses.length).fill(
+        whbarAddress
+      );
+
+      const txId = this.transferTokenToMultiple(
+        whbarAddressArray,
+        rewarderAddresses,
+        amounts
+      );
+      if (txId) {
+        console.log("Success to fund the rewerders");
+      }
+    }
+  }
+
+  /**
+   * This function fund the rewarders with multiple tokens
+   * @param {string[]} rewarderAddresses Array of rewarders addresses
+   * @param {string[][]} tokensAddresses Array of Array with address of token
+   * @param {number[][]} amounts Array of Array with amount of token to fund each rewarder
+   */
+  async fundRewardersWithTokens(rewarderAddresses, tokensAddresses, amounts) {
+    if (
+      tokensAddresses.length !== amounts.length ||
+      rewarderAddresses.length !== tokensAddresses.length ||
+      rewarderAddresses.length !== amounts.length
+    ) {
+      throw new Error("The lengh of arrays not is same");
+    }
+
+    for (let index = 0; index < rewarderAddresses.length; index++) {
+      const tokens = tokensAddresses[index];
+      const tokensAmounts = amounts[index];
+      const rewarder = rewarderAddresses[index];
+
+      if (tokens.length !== tokensAmounts.length) {
+        throw new Error("The lengh of tokens not is same of amounts");
+      }
+
+      /** @type {string[]}*/
+      const rewarderArray = new Array(tokens.length).fill(rewarder);
+
+      const txId = this.transferTokenToMultiple(
+        tokens,
+        rewarderArray,
+        tokensAmounts
+      );
+
+      if (txId) {
+        console.log(`Success to fund the rewarder ${rewarder}`);
+      }
     }
   }
 }
