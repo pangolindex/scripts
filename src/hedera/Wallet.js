@@ -325,6 +325,29 @@ class Wallet {
   }
 
   /**
+   * This function add new rewarder
+   * @param {string} pangoChefAddress 
+   * @param {number} poolId 
+   * @param {string} rewarder 
+   */
+  async addRewarder(pangoChefAddress, poolId, rewarder){
+    const pangochefId = this.toContractId(pangoChefAddress);
+    const transaction = new ContractExecuteTransaction()
+        .setContractId(pangochefId)
+        .setFunction('setRewarder',
+            new ContractFunctionParameters()
+                .addUint256(poolId)
+                .addAddress(rewarder)
+        )
+        .setGas(250_000);
+
+    const txId = await this.sendTransaction(transaction);
+    if(txId){
+      console.log(`Success to add new rewarder to farm ${poolId}`)
+    }
+  }
+
+  /**
    * This function wrap hbar to whbar and fund the rewarders with whbar
    * @param {string} whbarAddress Address of whbar contract
    * @param {string[]} rewarderAddresses Address of rewarders
