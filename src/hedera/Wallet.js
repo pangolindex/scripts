@@ -12,6 +12,7 @@ const {
   ContractId,
   ContractFunctionParameters,
 } = require("@hashgraph/sdk");
+const { toContractId, toAccountId, toTokenId } = require("./utils");
 
 require("dotenv").config();
 
@@ -51,65 +52,12 @@ class Wallet {
   }
 
   /**
-   * This function check if the string is valid account id, 0.0.0000...
-   * @param {string | undefined} hederaId  Address to check
-   * @returns {string | false}
-   */
-  isHederaIdValid(hederaId) {
-    if (
-      hederaId &&
-      hederaId
-        .toLowerCase()
-        .match(
-          /^(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))(?:-([a-z]{5}))?$/g
-        )
-    ) {
-      return hederaId;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * This function convert a string to TokenId instance
-   * @param {string} tokenAddress Token address
-   * @returns {TokenId}
-   */
-  toTokenId(tokenAddress) {
-    return this.isHederaIdValid(tokenAddress)
-      ? TokenId.fromString(tokenAddress)
-      : TokenId.fromSolidityAddress(tokenAddress);
-  }
-
-  /**
-   * This function convert a string to AccountId instance
-   * @param {string} address
-   * @returns {AccountId}
-   */
-  toAccountId(address) {
-    return this.isHederaIdValid(address)
-      ? AccountId.fromString(address)
-      : AccountId.fromSolidityAddress(address);
-  }
-
-  /**
-   * This function convert a string to ContractId instance
-   * @param {string} address
-   * @returns {ContractId}
-   */
-  toContractId(address) {
-    return this.isHederaIdValid(address)
-      ? ContractId.fromString(address)
-      : ContractId.fromSolidityAddress(address);
-  }
-
-  /**
    * Function to associate with the  token
    * @param {string[]} tokenAddresses Token address
    */
   async tokenAssociate(tokenAddresses) {
     const tokenIds = tokenAddresses.map((tokenAddress) =>
-      this.toTokenId(tokenAddress)
+      toTokenId(tokenAddress)
     );
     const transaction = new TokenAssociateTransaction();
     transaction.setAccountId(this.accountId);
@@ -127,7 +75,7 @@ class Wallet {
    * @param {number} amount Amount of HBAR to send
    */
   async transferHBAR(recipient, amount) {
-    const recipientId = this.toAccountId(recipient);
+    const recipientId = toAccountId(recipient);
     // Create a transaction to transfer HBAR to recipient
     const transaction = new TransferTransaction()
       .addHbarTransfer(this.accountId, new Hbar(amount * -1))
@@ -151,7 +99,7 @@ class Wallet {
     const transaction = new TransferTransaction();
     let message = "Success to Transfer: \n";
     for (let index = 0; index < recipients.length; index++) {
-      const recipientId = this.toAccountId(recipients[index]);
+      const recipientId = toAccountId(recipients[index]);
       const amount = amounts[index];
       transaction
         .addHbarTransfer(this.accountId, new Hbar(-amount))
@@ -172,8 +120,8 @@ class Wallet {
    * @param {number} amount
    */
   async transferToken(tokenAddress, recipient, amount) {
-    const recipientId = this.toAccountId(recipient);
-    const tokenId = this.toTokenId(tokenAddress);
+    const recipientId = toAccountId(recipient);
+    const tokenId = toTokenId(tokenAddress);
     // Create a transaction to transfer Token to recipient
     const transaction = new TransferTransaction()
       .addTokenTransfer(tokenId, this.accountId, -amount)
@@ -201,8 +149,8 @@ class Wallet {
     let message = "Success to Transfer: \n";
     for (let index = 0; index < tokenAddresses.length; index++) {
       const amount = amounts[index];
-      const recipientId = this.toAccountId(recipients[index]);
-      const tokenId = this.toTokenId(tokenAddresses[index]);
+      const recipientId = toAccountId(recipients[index]);
+      const tokenId = toTokenId(tokenAddresses[index]);
       transaction
         .addTokenTransfer(tokenId, this.accountId, -amount)
         .addTokenTransfer(tokenId, recipientId, amount);
@@ -224,7 +172,7 @@ class Wallet {
    * @param {string} pairContract Address of pair contract in EVM format
    */
   async addFarm(pangoChefAddress, tokenAddress, pairContract) {
-    const pangoChefId = this.toContractId(pangoChefAddress);
+    const pangoChefId = toContractId(pangoChefAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(pangoChefId)
@@ -254,7 +202,7 @@ class Wallet {
       throw new Error("The lengh of pool ids not is same of weights");
     }
 
-    const pangoChefId = this.toContractId(pangoChefAddress);
+    const pangoChefId = toContractId(pangoChefAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(pangoChefId)
@@ -284,7 +232,7 @@ class Wallet {
    * @param {number} amount Amount of HBAR to wrap
    */
   async wrap(whbarAddress, amount) {
-    const whbarContractId = this.toContractId(whbarAddress);
+    const whbarContractId = toContractId(whbarAddress);
     const transaction = new ContractExecuteTransaction()
       .setContractId(whbarContractId)
       .setFunction("deposit")
@@ -305,7 +253,7 @@ class Wallet {
    * @param {number} amount Amount of WHBAR to unwrap
    */
   async unwrap(whbarAddress, amount) {
-    const whbarContractId = this.toContractId(whbarAddress);
+    const whbarContractId = toContractId(whbarAddress);
     const transaction = new ContractExecuteTransaction()
       .setContractId(whbarContractId)
       .setFunction(
@@ -329,7 +277,7 @@ class Wallet {
    * @param {string} rewarder
    */
   async addRewarder(pangoChefAddress, poolId, rewarder) {
-    const pangochefId = this.toContractId(pangoChefAddress);
+    const pangochefId = toContractId(pangoChefAddress);
     const transaction = new ContractExecuteTransaction()
       .setContractId(pangochefId)
       .setFunction(
@@ -434,7 +382,7 @@ class Wallet {
     description,
     nftId
   ) {
-    const governorId = this.toContractId(governorAddress);
+    const governorId = toContractId(governorAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(governorId)
@@ -461,7 +409,7 @@ class Wallet {
    * @param {number} proposalId Id of proposal
    */
   async executeProposal(governorAddress, proposalId) {
-    const governorId = this.toContractId(governorAddress);
+    const governorId = toContractId(governorAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(governorId)
@@ -482,7 +430,7 @@ class Wallet {
    * @param {number} proposalId Id of proposal
    */
   async queueProposal(governorAddress, proposalId) {
-    const governorId = this.toContractId(governorAddress);
+    const governorId = toContractId(governorAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(governorId)
@@ -503,7 +451,7 @@ class Wallet {
    * @param {number} proposalId Id of proposal
    */
   async cancelProposal(governorAddress, proposalId) {
-    const governorId = this.toContractId(governorAddress);
+    const governorId = toContractId(governorAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(governorId)
@@ -526,7 +474,7 @@ class Wallet {
    * @param {number} nftId Id of nft to use to vote
    */
   async castVote(governorAddress, proposalId, support, nftId) {
-    const governorId = this.toContractId(governorAddress);
+    const governorId = toContractId(governorAddress);
 
     const transaction = new ContractExecuteTransaction()
       .setContractId(governorId)
@@ -571,7 +519,7 @@ class HederaMultisigWallet extends Wallet {
       throw new Error(`Set ${chain} account or private key in our env file`);
     }
 
-    const userAccountId = this.toAccountId(account);
+    const userAccountId = toAccountId(account);
     this.client.setOperator(userAccountId, privateKey);
   }
 }
@@ -595,24 +543,11 @@ class HederaWallet extends Wallet {
       throw new Error(`Set ${chain} account or private key in our env file`);
     }
 
-    this.accountId = this.toAccountId(account);
+    this.accountId = toAccountId(account);
 
     this.client.setOperator(this.accountId, privateKey);
   }
 }
-
-async function main() {
-  const multisingWallet = new HederaMultisigWallet(
-    "0x000000000000000000000000000000000040b1eb",
-    "testnet"
-  );
-
-  const wallet = new HederaWallet("testnet");
-
-  process.exit();
-}
-
-main();
 
 module.exports = {
   HederaMultisigWallet,
