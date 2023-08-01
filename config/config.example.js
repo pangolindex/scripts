@@ -1,3 +1,8 @@
+const {CHAINS, ChainId} = require("@pangolindex/sdk");
+require("dotenv").config();
+
+const chain = CHAINS[ChainId.AVALANCHE];
+
 module.exports = {
 
     WALLET: {
@@ -5,6 +10,6 @@ module.exports = {
         KEY: process.env.WALLET_KEY
     },
 
-    RPC: process.env.RPC ?? 'https://api.avax.network/ext/bc/C/rpc',
-
+    RPC: chain.rpc_uri,
+    CHAINID: ChainId.AVALANCHE,
 };
