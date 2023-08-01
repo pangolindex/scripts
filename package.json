@@ -25,7 +25,7 @@
     "@gnosis.pm/safe-web3-lib": "1.0.0",
     "@hashgraph/sdk": "2.30.0",
     "@pangolindex/exchange-contracts": "2.1.8",
-    "@pangolindex/sdk": "3.1.6",
+    "@pangolindex/sdk": "5.3.4-rc.0",
     "abi-decoder": "2.4.0",
     "axios": "0.25.0",
     "chalk": "4.1.2",
