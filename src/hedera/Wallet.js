@@ -15,10 +15,8 @@ const {
 
 require("dotenv").config();
 
-const mainnetAccount = process.env.HEDERA_MAINNET_ACCOUNT;
-const mainnetPrivateKey = process.env.HEDERA_MAINNET_PRIVATEKEY;
-const testnetAccount = process.env.HEDERA_TESTNET_ACCOUNT;
-const testnetPrivateKey = process.env.HEDERA_TESTNET_PRIVATEKEY;
+const account = process.env.WALLET_ADDRESS;
+const privateKey = process.env.WALLET_KEY;
 
 class Wallet {
   constructor() {}
@@ -569,15 +567,11 @@ class HederaMultisigWallet extends Wallet {
 
     this.accountId = AccountId.fromSolidityAddress(this.address);
 
-    const userAccount = chain === "mainnet" ? mainnetAccount : testnetAccount;
-    const privateKey =
-      chain === "mainnet" ? mainnetPrivateKey : testnetPrivateKey;
-
-    if (!userAccount || !privateKey) {
+    if (!account || !privateKey) {
       throw new Error(`Set ${chain} account or private key in our env file`);
     }
 
-    const userAccountId = this.toAccountId(userAccount);
+    const userAccountId = this.toAccountId(account);
     this.client.setOperator(userAccountId, privateKey);
   }
 }
@@ -596,10 +590,6 @@ class HederaWallet extends Wallet {
     this.chain = chain;
     this.client =
       chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
-
-    const account = chain === "mainnet" ? mainnetAccount : testnetAccount;
-    const privateKey =
-      chain === "mainnet" ? mainnetPrivateKey : testnetPrivateKey;
 
     if (!account || !privateKey) {
       throw new Error(`Set ${chain} account or private key in our env file`);
