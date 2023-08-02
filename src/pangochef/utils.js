@@ -1,9 +1,7 @@
 const { CHAINS, ChainId, NetworkType, Token } = require("@pangolindex/sdk");
 const Web3 = require("web3");
 const abis = require("../../config/abi.json");
-const {
-  fetchSingleContractMultipleData,
-} = require("../util/multicall");
+const { fetchSingleContractMultipleData } = require("../util/multicall");
 const Helpers = require("../core/helpers");
 const { tokenAddressToContractAddress } = require("../hedera/utils");
 
@@ -58,32 +56,26 @@ async function getFarms(chainId) {
     ),
   ]);
 
-  const fetchFn = async (poolInfo) => {
-    if (parseInt(poolInfo.poolType) === 1) {
-      let pairAddress = poolInfo.tokenOrRecipient;
+  const pairAddresses = poolInfos.map((pool) => {
+    if(parseInt(pool.poolType) === 2) return null;
 
-      // For hedera we can fetch the token address because this don't have the function token0 and token1
-      // we need to convert the token address to token id, sub 1 to get contract id and convert to contract adress
-      if (chain.network_type === NetworkType.HEDERA) {
-        pairAddress = tokenAddressToContractAddress(poolInfo.tokenOrRecipient);
-      }
+    return chain.network_type === NetworkType.HEDERA
+      ? tokenAddressToContractAddress(pool.tokenOrRecipient)
+      : pool.tokenOrRecipient;
+  });
 
-      const result = await Helpers.getPairTokensCached(pairAddress);
-      return result;
-    }
-    return [undefined, undefined];
-  };
-
-  const tokensAddresses = await Helpers.promiseAllChunked(
-    poolInfos,
-    fetchFn,
-    30,
-    null,
-    30
+  const tokensAddresesMap = await Helpers.getPairsTokensCachedViaMulticall(
+    pairAddresses.filter((address) => !!address),
+    chainId
   );
 
   const tokens = await Helpers.getTokensCached(
-    tokensAddresses.flat().filter((address) => !!address),
+    pairAddresses
+      .filter((address) => !!address)
+      .flatMap((address) => [
+        tokensAddresesMap.token0[address],
+        tokensAddresesMap.token1[address],
+      ]),
     chainId
   );
 
@@ -93,9 +85,10 @@ async function getFarms(chainId) {
     const pid = poolIds[index][0];
     const poolInfo = poolInfos[index];
     const poolRewardInfo = poolRewardInfos[index];
-    const token0Address = tokensAddresses[index][0];
+    const pairAddress = pairAddresses[index];
+    const token0Address = tokensAddresesMap.token0[pairAddress];
     const token0 = token0Address ? tokens[token0Address] : undefined;
-    const token1Address = tokensAddresses[index][1];
+    const token1Address = tokensAddresesMap.token1[pairAddress];
     const token1 = token1Address ? tokens[token1Address] : undefined;
 
     farms.push({
@@ -113,10 +106,9 @@ async function getFarms(chainId) {
 
 /**
  * Show the farms friendly
- * @param {Farm[]} farms 
+ * @param {Farm[]} farms
  */
-async function showFarmsFriendly(farms){
-
+async function showFarmsFriendly(farms) {
   const totalAllocPoints = farms.reduce((sum, { weight }) => sum + weight, 0);
 
   console.table(
@@ -139,5 +131,5 @@ async function showFarmsFriendly(farms){
 
 module.exports = {
   getFarms,
-  showFarmsFriendly
+  showFarmsFriendly,
 };
