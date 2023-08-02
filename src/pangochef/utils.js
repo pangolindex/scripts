@@ -1,27 +1,24 @@
-const {
-  CHAINS,
-  ChainId,
-  HEDERA_MAINNET,
-  HEDERA_TESTNET,
-  NetworkType,
-} = require("@pangolindex/sdk");
+const { CHAINS, ChainId, NetworkType, Token } = require("@pangolindex/sdk");
 const Web3 = require("web3");
 const abis = require("../../config/abi.json");
-const { fetchSingleContractMultipleData } = require("../util/multicall");
+const {
+  fetchSingleContractMultipleData,
+  fetchMultipleContractSingleData,
+} = require("../util/multicall");
 const Helpers = require("../core/helpers");
 const { tokenAddressToContractAddress } = require("../hedera/utils");
 
 /**
-   * @typedef Farm
-   * @type {object}
-   * @prop {number} pid
-   * @prop {number} type
-   * @prop {string} recipient
-   * @prop {string} rewarder
-   * @prop {string} token0
-   * @prop {string} token1
-   * @prop {number} weight
-   */
+ * @typedef Farm
+ * @type {object}
+ * @prop {number} pid
+ * @prop {number} poolType
+ * @prop {string} recipient
+ * @prop {string} rewarder
+ * @prop {Token | undefined} token0
+ * @prop {Token | undefined} token1
+ * @prop {number} weight
+ */
 
 /**
  * This function get a
@@ -71,19 +68,24 @@ async function getfarms(chainId) {
       if (chain.network_type === NetworkType.HEDERA) {
         pairAddress = tokenAddressToContractAddress(poolInfo.tokenOrRecipient);
       }
-    
-      const result = await Helpers.getPairTokenSymbolsCached(pairAddress);
+
+      const result = await Helpers.getPairTokensCached(pairAddress);
       return result;
     }
     return [undefined, undefined];
   };
 
-  const recipientsSymbols = await Helpers.promiseAllChunked(
+  const tokensAddresses = await Helpers.promiseAllChunked(
     poolInfos,
     fetchFn,
     30,
     null,
-    200
+    30
+  );
+
+  const tokens = await Helpers.getTokensCached(
+    tokensAddresses.flat().filter((address) => !!address),
+    chainId
   );
 
   /** @type {Farm[]}*/
@@ -92,15 +94,18 @@ async function getfarms(chainId) {
     const pid = poolIds[index][0];
     const poolInfo = poolInfos[index];
     const poolRewardInfo = poolRewardInfos[index];
-    const recipientSymbols = recipientsSymbols[index];
+    const token0Address = tokensAddresses[index][0];
+    const token0 = token0Address ? tokens[token0Address] : undefined;
+    const token1Address = tokensAddresses[index][1];
+    const token1 = token1Address ? tokens[token1Address] : undefined;
 
     farms.push({
       pid: pid,
-      type: parseInt(poolInfo.poolType),
+      poolType: parseInt(poolInfo.poolType),
       recipient: poolInfo.tokenOrRecipient,
       rewarder: poolInfo.rewarder,
-      token0: recipientSymbols[0],
-      token1: recipientSymbols[1],
+      token0: token0,
+      token1: token1,
       weight: parseInt(poolRewardInfo.weight),
     });
   }
@@ -108,5 +113,5 @@ async function getfarms(chainId) {
 }
 
 module.exports = {
-  getfarms
-}
+  getfarms,
+};

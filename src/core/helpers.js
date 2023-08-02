@@ -1,6 +1,8 @@
 const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const Web3 = require('web3');
+const { CHAINS, Token } = require('@pangolindex/sdk');
+const { fetchMultipleContractSingleData } = require('../util/multicall');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 
 const Helpers = {
@@ -8,6 +10,7 @@ const Helpers = {
     decimalsCache: {},
     token0Cache: {},
     token1Cache: {},
+    tokens: {},
 
     getSymbolCached: async (address) => {
         if (Helpers.symbolCache[address]) return Helpers.symbolCache[address];
@@ -112,6 +115,84 @@ const Helpers = {
         for (let i = a; i <= b; i++) arr.push(i);
         return arr;
     },
+
+  getTokenCached: async (address, chainId) => {
+        if (Helpers.tokens[address]) return Helpers.token0Cache[address];
+
+        const chain = CHAINS[chainId];
+        const contract = new web3.eth.Contract(ABI.TOKEN, address);
+        const multicall = new web3.eth.Contract(
+            ABI.MULTICALL,
+            chain.contracts?.multicall
+        );
+
+        const calls = [
+            {
+                target: address,
+                callData: encodeFunction(contract, "name"),
+            },
+            {
+                target: address,
+                callData: encodeFunction(contract, "symbol"),
+            },
+            {
+                target: address,
+                callData: encodeFunction(contract, "decimals"),
+            },
+        ];
+        const { returnData } = await fetchMulticallData(multicall, calls);
+
+        const name = decodeBytecodeResult(contract, "name", returnData[0])[0];
+        const symbol = decodeBytecodeResult(contract, "symbol", returnData[1])[0];
+        const decimals = decodeBytecodeResult(
+            contract,
+            "decimals",
+            returnData[2]
+        )[0];
+        const token = new Token(chainId, address, decimals, symbol, name);
+        token[address] = token;
+        return token;
+  },
+
+  getTokensCached: async (addresses, chainId) => {
+        //remove duplicates and cached tokens
+        const tokensAddresses = [...new Set(addresses)].filter(
+            (address) => !Helpers.tokens[address]
+        );
+
+        const tokensContract = tokensAddresses.map(
+            (address) => new web3.eth.Contract(ABI.TOKEN, address)
+        );
+
+        if (tokensAddresses.length === 0) return Helpers.tokens;
+
+        const multicall = new web3.eth.Contract(
+            ABI.MULTICALL,
+            CHAINS[chainId].contracts?.multicall
+        );
+
+        const [_names, _symbols, _decimals] = await Promise.all([
+            fetchMultipleContractSingleData(multicall, tokensContract, "name"),
+            fetchMultipleContractSingleData(multicall, tokensContract, "symbol"),
+            fetchMultipleContractSingleData(multicall, tokensContract, "decimals"),
+        ]);
+
+        for (let index = 0; index < tokensContract.length; index++) {
+            const tokenAddress = tokensAddresses[index];
+            const tokenName = _names[index];
+            const tokenSymbol = _symbols[index];
+            const tokenDecimals = _decimals[index];
+            Helpers.tokens[tokenAddress] = new Token(
+                chainId, 
+                tokenAddress, 
+                parseInt(tokenDecimals[0]), 
+                tokenSymbol[0], 
+                tokenName[0]
+            );
+        }
+
+        return Helpers.tokens;
+  },
 };
 
 module.exports = Helpers;

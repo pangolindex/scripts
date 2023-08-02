@@ -11,9 +11,15 @@ const web3 = new Web3();
  * @returns
  */
 function decodeBytecodeResult(contract, methodName, bytecode) {
-  const abi = contract.methods[methodName](undefined)._method.outputs;
-  const result = web3.eth.abi.decodeParameters(abi, bytecode);
-  return result;
+  try {
+    const abi = contract.methods[methodName]()._method.outputs;
+    const result = web3.eth.abi.decodeParameters(abi, bytecode);
+    return result;
+  } catch {
+    const abi = contract.methods[methodName](undefined)._method.outputs;
+    const result = web3.eth.abi.decodeParameters(abi, bytecode);
+    return result;
+  }
 }
 
 /**
@@ -35,7 +41,7 @@ function decodeFunction(contract, bytecode) {
  * @param {any[]} params
  * @returns {string}
  */
-function encodeFunction(contract, methodName, params) {
+function encodeFunction(contract, methodName, params = []) {
   const tx = contract.methods[methodName](...params);
   const bytecode = tx.encodeABI();
   return bytecode;
