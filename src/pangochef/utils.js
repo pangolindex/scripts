@@ -23,7 +23,7 @@ const { tokenAddressToContractAddress } = require("../hedera/utils");
  * This function get a
  * @param {ChainId} chainId
  */
-async function getfarms(chainId) {
+async function getFarms(chainId) {
   const chain = CHAINS[chainId];
   const web3 = new Web3(new Web3.providers.HttpProvider(chain.rpc_uri));
 
@@ -138,6 +138,6 @@ async function showFarmsFriendly(farms){
 }
 
 module.exports = {
-  getfarms,
+  getFarms,
   showFarmsFriendly
 };

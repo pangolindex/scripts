@@ -11,7 +11,7 @@ const chainId = CONFIG.CHAINID;
  */
 (async (chainId) => {
     const start = Date.now();
-    const pangoFarms = await getfarms(chainId);
+    const pangoFarms = await getFarms(chainId);
     showFarmsFriendly(pangoFarms);
     console.log(`Completed in ${(Date.now() - start) / 1000} sec`);
 })(chainId);
