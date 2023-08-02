@@ -3,7 +3,6 @@ const Web3 = require("web3");
 const abis = require("../../config/abi.json");
 const {
   fetchSingleContractMultipleData,
-  fetchMultipleContractSingleData,
 } = require("../util/multicall");
 const Helpers = require("../core/helpers");
 const { tokenAddressToContractAddress } = require("../hedera/utils");
@@ -112,6 +111,33 @@ async function getfarms(chainId) {
   return farms;
 }
 
+/**
+ * Show the farms friendly
+ * @param {Farm[]} farms 
+ */
+async function showFarmsFriendly(farms){
+
+  const totalAllocPoints = farms.reduce((sum, { weight }) => sum + weight, 0);
+
+  console.table(
+    farms.map((farm) => {
+      farm.poolType =
+        farm.poolType === 1
+          ? "ERC20 Pool"
+          : farm.poolType === 2
+          ? "Relayer Pool"
+          : "Unset Pool";
+
+      farm.token0 = farm.token0?.symbol;
+      farm.token1 = farm.token1?.symbol;
+
+      return farm;
+    })
+  );
+  console.log(`Total alloc points: ${totalAllocPoints}`);
+}
+
 module.exports = {
   getfarms,
+  showFarmsFriendly
 };
