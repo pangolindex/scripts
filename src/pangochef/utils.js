@@ -11,18 +11,18 @@ const { tokenAddressToContractAddress } = require("../hedera/utils");
 /**
  * @typedef Farm
  * @type {object}
- * @prop {number} pid
- * @prop {number} poolType
- * @prop {string} recipient
- * @prop {string} rewarder
- * @prop {Token | undefined} token0
- * @prop {Token | undefined} token1
- * @prop {number} weight
- * @prop {Token[]} extraRewards
+ * @prop {number} pid - Pool id
+ * @prop {number} poolType - Type of pool, 1 ERC20, 2 Relayer, 3 Unseted 
+ * @prop {string} recipient - Pgl token address or the contract will receive the png
+ * @prop {string} rewarder - This is for superfarms, so if address is different of 0x0...0 is the rewarder contract that give the extras rewards
+ * @prop {Token | undefined} token0 - Token 0 from PGL
+ * @prop {Token | undefined} token1 - Token 1 from PGL
+ * @prop {number} weight - Weight of farm
+ * @prop {Token[]} extraRewards - List of extra rewards tokens
  */
 
 /**
- * This function get a
+ * This function get all pangocheft farms
  * @param {ChainId} chainId
  */
 async function getFarms(chainId) {
