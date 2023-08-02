@@ -1,15 +1,12 @@
-const MAINNETADDRESSES = require("./deployment.mainnet.json");
 const {
   Client,
   AccountId,
   TokenAssociateTransaction,
-  TokenId,
   TransactionId,
   Transaction,
   TransferTransaction,
   Hbar,
   ContractExecuteTransaction,
-  ContractId,
   ContractFunctionParameters,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");

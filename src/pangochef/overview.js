@@ -1,4 +1,3 @@
-const { ChainId } = require("@pangolindex/sdk");
 const CONFIG = require("../../config/config.js");
 const { getfarms, showFarmsFriendly } = require("./utils");
 
