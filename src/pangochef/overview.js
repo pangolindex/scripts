@@ -1,5 +1,5 @@
 const CONFIG = require("../../config/config.js");
-const { getfarms, showFarmsFriendly } = require("./utils");
+const { getFarms, showFarmsFriendly } = require("./utils");
 
 // Change These Variables in config file
 // --------------------------------------------------
