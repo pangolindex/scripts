@@ -1,9 +1,7 @@
 const inquirer = require("inquirer");
-const TreePrompt = require("inquirer-tree-prompt");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils.js");
-const { ALL_CHAINS, ChainId } = require("@pangolindex/sdk");
+const { ALL_CHAINS, ChainId, CHAINS, ChefType, NetworkType } = require("@pangolindex/sdk");
 
-inquirer.registerPrompt("tree", TreePrompt);
 const chains = ALL_CHAINS.filter((chain) => chain.pangolin_is_live);
 
 async function main() {
@@ -19,50 +17,79 @@ async function main() {
       })),
     },
     {
-      type: "tree",
-      name: "option",
-      message: "Select a option",
-      tree: [
+      type: "list",
+      name: "category",
+      message: "Select a category",
+      choices: (answers) => {
+        const _choices = [];
+
+        CHAINS[answers.chain].contracts?.mini_chef?.type ===
+          ChefType.PANGO_CHEF &&
+          _choices.push({
+            name: "🡒 Pangochef",
+            value: "PANGOCHEF",
+            short: "🡓 Pangochef",
+          });
+
+        CHAINS[answers.chain].contracts?.mini_chef?.type ===
+          ChefType.MINI_CHEF_V2 &&
+          _choices.push({
+            name: "🡒 Minichef",
+            value: "MINICHEF",
+            short: "🡓 Minichef",
+          });
+
+        CHAINS[answers.chain].network_type === NetworkType.HEDERA && _choices.push({
+          name: "🡒 Hedera Wallet",
+          value: "HEDERA WALLET",
+          short: "🡓 Hedera Wallet",
+        }, {
+          name: "🡒 Hedera Multisig",
+          value: "HEDERAMULTISIG",
+          short: "🡓 Hedera Multisig",
+        })
+
+        return _choices;
+      },
+    },
+    {
+      type: "list",
+      name: "pangochef",
+      message: "Select a pangochef option",
+      when: (answers) => {
+        return answers.category === "PANGOCHEF";
+      },
+      choices: [
         {
-          name: "Pangochef",
-          value: "",
-          open: true,
-          children: [
-            {
-              name: "List all farms.",
-              value: "LISTPANGO",
-              short: "List all pangochef farms.",
-            },
-            {
-              name: "List active farms.",
-              value: "LISTPANGOACTIVE",
-              short: "List all active pangochef farms.",
-            },
-            {
-              name: "List all superfarms.",
-              value: "LISTPANGOSUPER",
-              short: "List all pangochef super farms.",
-            },
-            {
-              name: "List active superfarms.",
-              value: "LISTPANGOSUPERACTIVE",
-              short: "List all active pangochef superfarms.",
-            },
-          ],
+          name: "List all farms.",
+          value: "LISTPANGO",
+          short: "List all pangochef farms.",
+        },
+        {
+          name: "List active farms.",
+          value: "LISTPANGOACTIVE",
+          short: "List all active pangochef farms.",
+        },
+        {
+          name: "List all superfarms.",
+          value: "LISTPANGOSUPER",
+          short: "List all pangochef super farms.",
+        },
+        {
+          name: "List active superfarms.",
+          value: "LISTPANGOSUPERACTIVE",
+          short: "List all active pangochef superfarms.",
         },
       ],
     },
   ];
 
-  let answers = await inquirer.prompt(questions);
+  const answers = await inquirer.prompt(questions);
 
-  if (answers.option.startsWith("LISTPANGO")) {
+  if (answers.pangochef?.startsWith("LISTPANGO")) {
     const farms = await getFarms(answers.chain);
 
-    switch (answers.option) {
-      case "LISTPANGOACTIVE":
-        showFarmsFriendly(farms.filter((farm) => farm.weight > 0));
-        break;
+    switch (answers.pangochef) {
       case "LISTPANGOACTIVE":
         showFarmsFriendly(farms.filter((farm) => farm.weight > 0));
         break;
@@ -70,13 +97,19 @@ async function main() {
         showFarmsFriendly(farms.filter((farm) => farm.extraRewards.length > 0));
         break;
       case "LISTPANGOSUPERACTIVE":
-        showFarmsFriendly(farms.filter((farm) => farm.weight > 0 && farm.extraRewards.length > 0));
+        showFarmsFriendly(
+          farms.filter(
+            (farm) => farm.weight > 0 && farm.extraRewards.length > 0
+          )
+        );
         break;
       default:
         showFarmsFriendly(farms);
         break;
     }
   }
+
+  process.exit(0);
 }
 
 main();
