@@ -8,9 +8,13 @@ const web3 = new Web3();
  * @param {*} contract
  * @param {string} methodName
  * @param {string} bytecode
- * @returns
+ * @returns {any[]}
  */
 function decodeBytecodeResult(contract, methodName, bytecode) {
+  if (bytecode === "0x") {
+    return undefined;
+  }
+
   try {
     const abi = contract.methods[methodName]()._method.outputs;
     const result = web3.eth.abi.decodeParameters(abi, bytecode);
@@ -52,6 +56,7 @@ function encodeFunction(contract, methodName, params = []) {
  * @param {any} multicall
  * @param {{target: string, callData: string}[]} calls
  * @param {number} [chunkSize=30]
+ * @returns {{blockNumber: number, returnData: string[]}}
  */
 async function fetchMulticallData(multicall, calls, chunkSize = 30) {
   const fetchFn = async (_calls) => {

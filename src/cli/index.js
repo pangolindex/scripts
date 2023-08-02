@@ -30,20 +30,52 @@ async function main() {
           children: [
             {
               name: "List all farms.",
-              value: "listPangochefFarms",
+              value: "LISTPANGO",
               short: "List all pangochef farms.",
+            },
+            {
+              name: "List active farms.",
+              value: "LISTPANGOACTIVE",
+              short: "List all active pangochef farms.",
+            },
+            {
+              name: "List all superfarms.",
+              value: "LISTPANGOSUPER",
+              short: "List all pangochef super farms.",
+            },
+            {
+              name: "List active superfarms.",
+              value: "LISTPANGOSUPERACTIVE",
+              short: "List all active pangochef superfarms.",
             },
           ],
         },
       ],
     },
-  ]; 
+  ];
 
   let answers = await inquirer.prompt(questions);
 
-  if (answers.option === "listPangochefFarms") {
+  if (answers.option.startsWith("LISTPANGO")) {
     const farms = await getFarms(answers.chain);
-    showFarmsFriendly(farms);
+
+    switch (answers.option) {
+      case "LISTPANGOACTIVE":
+        showFarmsFriendly(farms.filter((farm) => farm.weight > 0));
+        break;
+      case "LISTPANGOACTIVE":
+        showFarmsFriendly(farms.filter((farm) => farm.weight > 0));
+        break;
+      case "LISTPANGOSUPER":
+        showFarmsFriendly(farms.filter((farm) => farm.extraRewards.length > 0));
+        break;
+      case "LISTPANGOSUPERACTIVE":
+        showFarmsFriendly(farms.filter((farm) => farm.weight > 0 && farm.extraRewards.length > 0));
+        break;
+      default:
+        showFarmsFriendly(farms);
+        break;
+    }
   }
 }
 

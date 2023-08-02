@@ -1,7 +1,10 @@
 const { CHAINS, ChainId, NetworkType, Token } = require("@pangolindex/sdk");
 const Web3 = require("web3");
 const abis = require("../../config/abi.json");
-const { fetchSingleContractMultipleData } = require("../util/multicall");
+const {
+  fetchSingleContractMultipleData,
+  fetchMultipleContractSingleData,
+} = require("../util/multicall");
 const Helpers = require("../core/helpers");
 const { tokenAddressToContractAddress } = require("../hedera/utils");
 
@@ -15,6 +18,7 @@ const { tokenAddressToContractAddress } = require("../hedera/utils");
  * @prop {Token | undefined} token0
  * @prop {Token | undefined} token1
  * @prop {number} weight
+ * @prop {Token[]} extraRewards
  */
 
 /**
@@ -57,7 +61,7 @@ async function getFarms(chainId) {
   ]);
 
   const pairAddresses = poolInfos.map((pool) => {
-    if(parseInt(pool.poolType) === 2) return null;
+    if (parseInt(pool.poolType) === 2) return null;
 
     return chain.network_type === NetworkType.HEDERA
       ? tokenAddressToContractAddress(pool.tokenOrRecipient)
@@ -79,6 +83,19 @@ async function getFarms(chainId) {
     chainId
   );
 
+  const rewarderContracts = poolInfos.map(
+    (poolInfo) =>
+      new web3.eth.Contract(abis.REWARDER_VIA_MULTIPLIER, poolInfo.rewarder)
+  );
+
+  const extraRewardsAddresses = await fetchMultipleContractSingleData(
+    multicallContract, rewarderContracts, "getRewardTokens"
+  );
+
+  const extraTokens = await Helpers.getTokensCached(
+    extraRewardsAddresses.flat().filter(address => !!address).flatMap(address => address[0]), chainId
+  );
+
   /** @type {Farm[]}*/
   const farms = [];
   for (let index = 0; index < poolIds.length; index++) {
@@ -90,7 +107,8 @@ async function getFarms(chainId) {
     const token0 = token0Address ? tokens[token0Address] : undefined;
     const token1Address = tokensAddresesMap.token1[pairAddress];
     const token1 = token1Address ? tokens[token1Address] : undefined;
-
+    const extraRewardsAddress = extraRewardsAddresses[index] ?? [[]];
+    const poolExtraRewardTokens = extraRewardsAddress[0].map(address => extraTokens[address]);
     farms.push({
       pid: pid,
       poolType: parseInt(poolInfo.poolType),
@@ -99,6 +117,7 @@ async function getFarms(chainId) {
       token0: token0,
       token1: token1,
       weight: parseInt(poolRewardInfo.weight),
+      extraRewards: poolExtraRewardTokens,
     });
   }
   return farms;
@@ -122,7 +141,7 @@ async function showFarmsFriendly(farms) {
 
       farm.token0 = farm.token0?.symbol;
       farm.token1 = farm.token1?.symbol;
-
+      farm.extraRewards = farm.extraRewards.map(token => token?.symbol)
       return farm;
     })
   );
