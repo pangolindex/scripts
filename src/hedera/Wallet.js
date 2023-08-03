@@ -8,23 +8,64 @@ const {
   Hbar,
   ContractExecuteTransaction,
   ContractFunctionParameters,
+  NftId,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
+const {
+  ChainId,
+  CurrencyAmount,
+  CAVAX,
+  TokenAmount,
+} = require("@pangolindex/sdk");
+const { HederaFetcher } = require("./fetcher");
+const Helpers = require("../core/helpers");
 
 require("dotenv").config();
 
 const account = process.env.WALLET_ADDRESS;
 const privateKey = process.env.WALLET_KEY;
 
-class Wallet {
-  constructor() {}
+const InvaliEnvError = new Error(`Set account or private key in our env file`);
 
+class Wallet {
   /** @type  {AccountId}*/
   accountId;
   /** @type {Client} */
   client;
-  /** @type {'mainnet' | 'testnet'} */
+  /** @type {ChainId} */
+  chainId;
+  /** @type {"mainnet" | "testnet"} */
   chain;
+  fetcher;
+  /** @type {CurrencyAmount} - Amount of Hbar in account*/
+  hbarBalance;
+  /** @type {TokenAmount[]}  */
+  tokensBalance;
+  /** @type {string} - Last transaction*/
+  transaction;
+
+  /**
+   *
+   * @param {ChainId} chainId
+   * @throws {InvaliEnvError} Will throw an error if not have account or pivate key in env file
+   */
+  constructor(chainId) {
+    this.chainId = chainId;
+    this.chain = chainId === ChainId.HEDERA_MAINNET ? "mainnet" : "testnet";
+    this.client =
+      chainId === ChainId.HEDERA_MAINNET
+        ? Client.forMainnet()
+        : Client.forTestnet();
+
+    if (!account || !privateKey) {
+      throw InvaliEnvError;
+    }
+
+    this.fetcher = new HederaFetcher(chainId);
+    this.hbarBalance = CurrencyAmount.fromRawAmount(CAVAX[chainId], 0);
+    this.tokensBalance = [];
+    this.transaction = "";
+  }
 
   /**
    * This function send a transaction to hedera
@@ -488,6 +529,46 @@ class Wallet {
       console.log("Success to vote in the proposal");
     }
   }
+
+  async getWalletInfo() {
+    console.log("Fetching wallet info...");
+    const start = Date.now();
+
+    const [walletInfo, tokensAssociated] = await Promise.all([
+      this.fetcher.getWalletInfo(this.accountId.toString()),
+      this.fetcher.getWalletTokens(this.accountId.toString()),
+    ]);
+
+    this.hbarBalance = CurrencyAmount.fromRawAmount(
+      CAVAX[this.chainId],
+      walletInfo?.hbarBalance ?? 0
+    );
+
+    this.transaction = walletInfo.transaction ?? "";
+
+    //remove nfts from array
+    const tokens = walletInfo.tokens.filter((token) =>
+      tokensAssociated.includes(token.token_id)
+    );
+    const tokensToFetch = tokens.map((tokenInfo) =>
+      Helpers.toChecksumAddress(
+        `0x${toTokenId(tokenInfo.token_id).toSolidityAddress()}`
+      )
+    );
+
+    const tokensMap = await Helpers.getTokensCached(
+      tokensToFetch,
+      this.chainId
+    );
+
+    this.tokensBalance = tokens.map((tokenInfo, index) => {
+      const address = tokensToFetch[index];
+      const token = tokensMap[address];
+      return new TokenAmount(token, tokenInfo.balance);
+    });
+
+    console.log(`Completed in ${(Date.now() - start) / 1000} sec`);
+  }
 }
 
 /**
@@ -501,20 +582,13 @@ class HederaMultisigWallet extends Wallet {
   /**
    * @constructor
    * @param {string} multisigAddress Adddress of multisig
-   * @param {'mainnet' | 'testnet' | undefined} chain
+   * @param {ChainId} chainId
    */
-  constructor(multisigAddress, chain = "mainnet") {
-    super();
+  constructor(multisigAddress, chainId = ChainId.HEDERA_MAINNET) {
+    super(chainId);
     this.address = multisigAddress;
-    this.chain = chain;
-    this.client =
-      chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
 
     this.accountId = AccountId.fromSolidityAddress(this.address);
-
-    if (!account || !privateKey) {
-      throw new Error(`Set ${chain} account or private key in our env file`);
-    }
 
     const userAccountId = toAccountId(account);
     this.client.setOperator(userAccountId, privateKey);
@@ -528,17 +602,10 @@ class HederaMultisigWallet extends Wallet {
 class HederaWallet extends Wallet {
   /**
    * @constructor
-   * @param {'mainnet' | 'testnet' | undefined} chain
+   * @param {ChainId} chain
    */
-  constructor(chain = "mainnet") {
-    super();
-    this.chain = chain;
-    this.client =
-      chain === "mainnet" ? Client.forMainnet() : Client.forTestnet();
-
-    if (!account || !privateKey) {
-      throw new Error(`Set ${chain} account or private key in our env file`);
-    }
+  constructor(chainId = ChainId.HEDERA_MAINNET) {
+    super(chainId);
 
     this.accountId = toAccountId(account);
 
