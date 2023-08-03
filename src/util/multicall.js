@@ -8,7 +8,7 @@ const web3 = new Web3();
  * @param {*} contract
  * @param {string} methodName
  * @param {string} bytecode
- * @returns {any[]}
+ * @returns {any[] | undefined}
  */
 function decodeBytecodeResult(contract, methodName, bytecode) {
   if (bytecode === "0x") {
