@@ -2,7 +2,7 @@ const CONFIG = require('../../config/config');
 const ABI = require('../../config/abi.json');
 const Web3 = require('web3');
 const { CHAINS, Token } = require('@pangolindex/sdk');
-const { fetchMultipleContractSingleData } = require('../util/multicall');
+const { fetchMultipleContractSingleData , encodeFunction, decodeBytecodeResult, fetchMulticallData} = require('../util/multicall');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 
 const Helpers = {
@@ -10,6 +10,7 @@ const Helpers = {
     decimalsCache: {},
     token0Cache: {},
     token1Cache: {},
+    /** @type {{[x: string]: Token}} */
     tokens: {},
 
     getSymbolCached: async (address) => {
@@ -117,7 +118,7 @@ const Helpers = {
     },
 
     getTokenCached: async (address, chainId) => {
-        if (Helpers.tokens[address]) return Helpers.token0Cache[address];
+        if (Helpers.tokens[address]) return Helpers.tokens[address];
 
         const chain = CHAINS[chainId];
         const _web3 = new Web3(new Web3.providers.HttpProvider(CHAINS[chainId].rpc_uri));
@@ -181,7 +182,7 @@ const Helpers = {
 
         for (let index = 0; index < tokensContract.length; index++) {
             const tokenAddress = tokensAddresses[index];
-            const tokenName = _names[index];
+            const tokenName = _names[index][0];
             const tokenSymbol = _symbols[index][0];
             const tokenDecimals = _decimals[index][0];
             Helpers.tokens[tokenAddress] = new Token(
