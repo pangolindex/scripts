@@ -26,7 +26,7 @@ function isHederaIdValid(hederaId) {
  * @returns {TokenId}
  */
 function toTokenId(tokenAddress) {
-  return this.isHederaIdValid(tokenAddress)
+  return isHederaIdValid(tokenAddress)
     ? TokenId.fromString(tokenAddress)
     : TokenId.fromSolidityAddress(tokenAddress);
 }
@@ -37,7 +37,7 @@ function toTokenId(tokenAddress) {
  * @returns {AccountId}
  */
 function toAccountId(address) {
-  return this.isHederaIdValid(address)
+  return isHederaIdValid(address)
     ? AccountId.fromString(address)
     : AccountId.fromSolidityAddress(address);
 }
@@ -48,7 +48,7 @@ function toAccountId(address) {
  * @returns {ContractId}
  */
 function toContractId(address) {
-  return this.isHederaIdValid(address)
+  return isHederaIdValid(address)
     ? ContractId.fromString(address)
     : ContractId.fromSolidityAddress(address);
 }
