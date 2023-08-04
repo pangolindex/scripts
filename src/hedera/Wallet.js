@@ -8,6 +8,7 @@ const {
   Hbar,
   ContractExecuteTransaction,
   ContractFunctionParameters,
+  PrivateKey,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
 const {
@@ -236,19 +237,19 @@ class Wallet {
   /**
    * This function wrap HBAR in WHBAR
    * @param {string} whbarAddress Address of whbar contract
-   * @param {number} amount Amount of HBAR to wrap
+   * @param {CurrencyAmount} amount Amount of HBAR to wrap
    */
   async wrap(whbarAddress, amount) {
     const whbarContractId = toContractId(whbarAddress);
     const transaction = new ContractExecuteTransaction()
       .setContractId(whbarContractId)
       .setFunction("deposit")
-      .setPayableAmount(new Hbar(amount))
+      .setPayableAmount(amount.raw.toString())
       .setGas(100_000);
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(chalk.green(`Success to wrap ${amount} HBAR.`));
+      console.log(chalk.green(`Success to wrap ${amount.toExact()} HBAR.`));
       return txId;
     }
     return null;

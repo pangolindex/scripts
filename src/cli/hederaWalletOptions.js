@@ -3,6 +3,7 @@ const {
   TokenAmount,
   CurrencyAmount,
   Token,
+  CHAINS,
 } = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
@@ -21,9 +22,29 @@ function validadeAddress(input) {
 }
 
 /**
+ * This function convert an input to CurrencyAmount
+ * @param {number} input
+ * @param {CurrencyAmount | TokenAmount} tokenAmount
+ * @returns {CurrencyAmount | TokenAmount}
+ */
+function convertToAmount(input, tokenAmount) {
+  const token =
+    tokenAmount instanceof TokenAmount
+      ? tokenAmount.token
+      : tokenAmount.currency;
+  const rawAmount = Helpers.parseUnits(input, token.decimals);
+
+  return token instanceof Token
+    ? new TokenAmount(token, rawAmount)
+    : CurrencyAmount.fromRawAmount(token, rawAmount);
+}
+
+/**
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
 function generateQuestions(wallet) {
+  const chain = CHAINS[wallet.chainId];
+
   const choices = [
     {
       name: "Show wallet info, HBAR balance, last transaction, tokens balances.",
@@ -35,16 +56,8 @@ function generateQuestions(wallet) {
       value: "listFarms",
     },
     {
-      name: "Associate a multiple tokens.",
+      name: "Associate to multiple tokens.",
       value: "asssociateToken",
-    },
-    {
-      name: "Wrap HBAR into WHBAR.",
-      value: "wrap",
-    },
-    {
-      name: "Uwrap WHBAR into HBAR.",
-      value: "unwrap",
     },
   ];
 
@@ -55,12 +68,33 @@ function generateQuestions(wallet) {
     });
   }
 
+  if (wallet.hbarBalance.greaterThan("0")) {
+    choices.push({
+      name: "Wrap HBAR into WHBAR.",
+      value: "wrap",
+    });
+  }
+
+  if (
+    wallet.tokensBalance.some(
+      (tokenBalance) =>
+        tokenBalance.greaterThan("0") &&
+        tokenBalance.token.address.toLowerCase() ===
+          chain.contracts?.wrapped_native_token?.toLowerCase()
+    )
+  ) {
+    choices.push({
+      name: "Uwrap WHBAR into HBAR.",
+      value: "unwrap",
+    });
+  }
+
   if (
     wallet.hbarBalance.greaterThan("0") ||
     wallet.tokensBalance.some((balance) => balance.greaterThan("0"))
   ) {
     choices.push({
-      name: "Transfer a tokens. (HBAR or another token in account)",
+      name: "Transfer tokens. (HBAR or anothers tokens in account)",
       value: "transferToken",
     });
   }
@@ -113,7 +147,7 @@ function generateQuestions(wallet) {
   return {
     type: "list",
     name: "category",
-    message: "Select a option: ",
+    message: "Select a option:",
     choices: choices,
   };
 }
@@ -127,7 +161,7 @@ async function associateTokens(wallet) {
   while (true) {
     const answers = await inquirer.prompt([
       {
-        message: "Enter with token address: ",
+        message: "Enter with token address:",
         name: "tokenAddress",
         type: "input",
         validate: validadeAddress,
@@ -173,24 +207,6 @@ async function transferTokens(wallet) {
     wallet.tokensBalance.filter((tokenBalance) => tokenBalance.greaterThan("0"))
   );
 
-  /**
-   * This function convert an input to
-   * @param {number} input
-   * @param {CurrencyAmount | TokenAmount} tokenAmount
-   * @returns {CurrencyAmount | TokenAmount}
-   */
-  function convertToAmount(input, tokenAmount) {
-    const token =
-      tokenAmount instanceof TokenAmount
-        ? tokenAmount.token
-        : tokenAmount.currency;
-    const rawAmount = Helpers.parseUnits(input, token.decimals);
-
-    return token instanceof Token
-      ? new TokenAmount(token, rawAmount)
-      : CurrencyAmount.fromRawAmount(token, rawAmount);
-  }
-
   while (true) {
     const answers = await inquirer.prompt([
       {
@@ -216,7 +232,7 @@ async function transferTokens(wallet) {
               ? `${tokenAmount.token.symbol}`
               : tokenAmount.currency.symbol;
 
-          return `${symbol} balance: ${tokenAmount.toExact()}, Enter with amount to transfer: `;
+          return `${symbol} balance: ${tokenAmount.toExact()}, Enter with amount to transfer:`;
         },
         name: "amount",
         type: "number",
@@ -237,7 +253,7 @@ async function transferTokens(wallet) {
         },
       },
       {
-        message: "Enter with recipient address: ",
+        message: "Enter with recipient address:",
         name: "recipient",
         type: "input",
         validate: validadeAddress,
@@ -246,7 +262,7 @@ async function transferTokens(wallet) {
         message: (prevAnswers) => {
           const recipient = prevAnswers.recipient;
           const name =
-          prevAnswers.token instanceof TokenAmount
+            prevAnswers.token instanceof TokenAmount
               ? `${prevAnswers.token.token.symbol} - ${prevAnswers.token.token.address}`
               : prevAnswers.token.currency.symbol;
           return `Confirm to transfer ${prevAnswers.amount} ${name} to ${recipient}?`;
@@ -271,7 +287,42 @@ async function transferTokens(wallet) {
     }
   }
 
-  await wallet.transferTokens(tokensAmount, recipients)
+  await wallet.transferTokens(tokensAmount, recipients);
+}
+
+/**
+ *
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function wrapHBAR(wallet) {
+  const chain = CHAINS[wallet.chainId];
+
+  const answer = await inquirer.prompt({
+    message: "Enter with amount to wrap:",
+    name: "amount",
+    type: "number",
+    validade: (input) => {
+      const rawAmount = convertToAmount(input, wallet.hbarBalance);
+      // HBAR is gas token, so we can't send all hbar in transfer
+      return (
+        (input > 0 && wallet.hbarBalance.greaterThan(rawAmount)) ||
+        "Invalid input."
+      );
+    },
+    transformer: (input) => {
+      return isNaN(input) || input <= 0 ? "" : input;
+    },
+  });
+
+  const whbarAddress = chain.contracts?.wrapped_native_token;
+  if (!whbarAddress) {
+    console.log(chalk.red("Error, this don't have wrapped contract!"));
+    return false;
+  }
+
+  const amount = convertToAmount(answer.amount, wallet.hbarBalance);
+  const txId = await wallet.wrap(whbarAddress, amount);
+  return !!txId;
 }
 
 /**
@@ -294,8 +345,8 @@ async function walletOptions(wallet) {
   };
 
   const [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
-  console.log("---------------------------------")
-  const questions = generateQuestions(wallet);
+  console.log("---------------------------------");
+  let questions = generateQuestions(wallet);
 
   while (true) {
     const answer = await inquirer.prompt(questions);
@@ -333,6 +384,12 @@ async function walletOptions(wallet) {
         await transferTokens(wallet);
         await fetchWalletInfo();
         break;
+      case "wrap":
+        const success = await wrapHBAR(wallet);
+        if(success){
+          await fetchWalletInfo();
+        }
+        break;
       case "exit":
         console.log(chalk.gray("Closing..."));
         process.exit(0);
@@ -340,6 +397,8 @@ async function walletOptions(wallet) {
         console.log(chalk.red("Invalid option."));
         break;
     }
+
+    questions = generateQuestions(wallet);
   }
 }
 
