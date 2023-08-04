@@ -19,6 +19,7 @@ const {
 } = require("@pangolindex/sdk");
 const { HederaFetcher } = require("./fetcher");
 const Helpers = require("../core/helpers");
+const chalk = require("chalk");
 
 require("dotenv").config();
 
@@ -80,11 +81,13 @@ class Wallet {
 
       const txId = executedTx.transactionId.toString();
       console.log(
-        `Transaction sent: https://hashscan.io/${this.chain}/transaction/${txId}`
+        chalk.green(
+          `Transaction sent: https://hashscan.io/${this.chain}/transaction/${txId}`
+        )
       );
       return txId;
     } catch (error) {
-      console.error("Error in sending transaction: ", error);
+      console.error(chalk.red("Error in sending transaction: ", error));
       return null;
     }
   }
@@ -102,9 +105,11 @@ class Wallet {
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(
-        `Success to Associate to: ${tokens
-          .map((token) => token.symbol)
-          .join(", ")}.`
+        chalk.green(
+          `Success to Associate to: ${tokens
+            .map((token) => token.symbol)
+            .join(", ")}.`
+        )
       );
     }
   }
@@ -124,7 +129,9 @@ class Wallet {
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(
-        `Success to Transfer ${amount.toString()} HBAR to ${recipientId.toString()}.`
+        chalk.green(
+          `Success to Transfer ${amount.toString()} HBAR to ${recipientId.toString()}.`
+        )
       );
     }
   }
@@ -149,7 +156,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(message);
+      console.log(chalk.green(message));
     }
   }
 
@@ -170,7 +177,9 @@ class Wallet {
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(
-        `Success to Transfer ${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}.`
+        chalk.green(
+          `Success to Transfer ${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}.`
+        )
       );
       return txId;
     }
@@ -198,7 +207,7 @@ class Wallet {
     }
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(message);
+      console.log(chalk.green(message));
       return txId;
     }
 
@@ -227,7 +236,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log("Success in add a new farm.");
+      console.log(chalk.green("Success in add a new farm."));
     }
   }
 
@@ -262,7 +271,7 @@ class Wallet {
         const weight = newWeights[index];
         message += `pid: ${poolId} - weight: ${weight}\n`;
       }
-      console.log(message);
+      console.log(chalk.green(message));
     }
   }
 
@@ -281,7 +290,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(`Success to wrap ${amount} HBAR.`);
+      console.log(chalk.green(`Success to wrap ${amount} HBAR.`));
       return txId;
     }
     return null;
@@ -304,7 +313,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(`Success to unwrap ${amount} WHBAR.`);
+      console.log(chalk.green(`Success to unwrap ${amount} WHBAR.`));
       return txId;
     }
     return null;
@@ -328,7 +337,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(`Success to add new rewarder to farm ${poolId}`);
+      console.log(chalk.green(`Success to add new rewarder to farm ${poolId}`));
     }
   }
 
@@ -359,9 +368,12 @@ class Wallet {
         amounts
       );
       if (txId) {
-        console.log("Success to fund the rewerders");
+        console.log(chalk.green("Success to fund the rewerders"));
+        return;
       }
     }
+
+    console.log(chalk.red("Error in fund rewarders with HBAR."));
   }
 
   /**
@@ -398,8 +410,11 @@ class Wallet {
       );
 
       if (txId) {
-        console.log(`Success to fund the rewarder ${rewarder}`);
+        console.log(chalk.green(`Success to fund the rewarder ${rewarder}`));
+        return;
       }
+
+      console.log(chalk.red("Error in fund rewarders with HBAR."));
     }
   }
 
@@ -439,7 +454,7 @@ class Wallet {
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to create a new propose");
+      console.log(chalk.green("Success to create a new propose"));
     }
   }
 
@@ -460,7 +475,7 @@ class Wallet {
 
     const txId = transaction.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to execute the proposal");
+      console.log(chalk.green("Success to execute the proposal"));
     }
   }
 
@@ -481,7 +496,7 @@ class Wallet {
 
     const txId = transaction.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to queue the proposal");
+      console.log(chalk.green("Success to queue the proposal"));
     }
   }
 
@@ -502,7 +517,7 @@ class Wallet {
 
     const txId = transaction.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to cancel the proposal");
+      console.log(chalk.green("Success to cancel the proposal"));
     }
   }
 
@@ -528,13 +543,12 @@ class Wallet {
 
     const txId = transaction.sendTransaction(transaction);
     if (txId) {
-      console.log("Success to vote in the proposal");
+      console.log(chalk.green("Success to vote in the proposal"));
     }
   }
 
   async getWalletInfo() {
     console.log("Fetching wallet info...");
-    const start = Date.now();
 
     const [walletInfo, tokensAssociated] = await Promise.all([
       this.fetcher.getWalletInfo(this.accountId.toString()),
@@ -580,8 +594,6 @@ class Wallet {
 class HederaMultisigWallet extends Wallet {
   /**@type {string} Address of multisig wallet in EVM format*/
   address;
-  /**@type {userAccountId} User connected to multisig*/
-  userAccountId;
 
   /**
    * @constructor
@@ -594,8 +606,15 @@ class HederaMultisigWallet extends Wallet {
 
     this.accountId = AccountId.fromSolidityAddress(this.address);
 
-    this.userAccountId = toAccountId(account);
+    const userAccountId = toAccountId(account);
     this.client.setOperator(this.userAccountId, privateKey);
+
+    console.log(
+      chalk.green("Connected to admin account:", userAccountId.toString())
+    );
+    console.log(
+      chalk.green("Connected to multisig:", this.accountId.toString())
+    );
   }
 }
 
@@ -614,6 +633,10 @@ class HederaWallet extends Wallet {
     this.accountId = toAccountId(account);
 
     this.client.setOperator(this.accountId, privateKey);
+
+    console.log(
+      chalk.green("Connected to multisig:", this.accountId.toString())
+    );
   }
 }
 

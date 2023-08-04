@@ -110,17 +110,8 @@ async function main() {
         validate: validadeAddress,
       });
       wallet = new HederaMultisigWallet(addressAnswer.address, answers.chain);
-      console.log(
-        chalk.green(
-          `Connected to admin account: ${wallet.userAccountId.toString()}`
-        )
-      );
-      console.log(chalk.green("Connected to multisig:", wallet.accountId.toString()));
     } else {
       wallet = new HederaWallet(answers.chain);
-      console.log(
-        chalk.green(`Connected with: ${wallet.accountId.toString()}`)
-      );
     }
     await walletOptions(wallet);
   }

@@ -4,6 +4,7 @@ const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
 const { isValidAddress, toTokenId } = require("../hedera/utils");
 const inquirer = require("inquirer");
 const Helpers = require("../core/helpers");
+const chalk = require("chalk");
 
 /**
  * Validade if a input is an herdera address or evm
@@ -224,7 +225,7 @@ async function walletOptions(wallet) {
         console.log("Closing...");
         process.exit(0);
       default:
-        console.log("Invalid option.");
+        console.log(chalk.red("Invalid option."));
         break;
     }
   }
