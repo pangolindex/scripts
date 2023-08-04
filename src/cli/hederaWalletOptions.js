@@ -1,4 +1,9 @@
-const { ChainId, TokenAmount } = require("@pangolindex/sdk");
+const {
+  ChainId,
+  TokenAmount,
+  CurrencyAmount,
+  Token,
+} = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
 const { isValidAddress, toTokenId } = require("../hedera/utils");
@@ -50,30 +55,14 @@ function generateQuestions(wallet) {
     });
   }
 
-  if (wallet.hbarBalance.greaterThan("0")) {
-    choices.push(
-      {
-        name: "Transfer HBAR.",
-        value: "transferHBAR",
-      },
-      {
-        name: "Transfer HBAR to multiple addresses.",
-        value: "transferHBARMultiple",
-      }
-    );
-  }
-
-  if (wallet.tokensBalance.some((balance) => balance.greaterThan("0"))) {
-    choices.push(
-      {
-        name: "Transfer a token.",
-        value: "transferToken",
-      },
-      {
-        name: "Transfer a tokens to multiple addresses.",
-        value: "transferTokens",
-      }
-    );
+  if (
+    wallet.hbarBalance.greaterThan("0") ||
+    wallet.tokensBalance.some((balance) => balance.greaterThan("0"))
+  ) {
+    choices.push({
+      name: "Transfer a tokens. (HBAR or another token in account)",
+      value: "transferToken",
+    });
   }
 
   choices.push(
@@ -130,7 +119,7 @@ function generateQuestions(wallet) {
 }
 
 /**
- * This function receive a answers about associateTokens and associate it
+ * This function associate to multiple tokens
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
 async function associateTokens(wallet) {
@@ -142,7 +131,7 @@ async function associateTokens(wallet) {
         name: "tokenAddress",
         type: "input",
         validate: validadeAddress,
-        transform: (input) => {
+        filter: (input) => {
           return Helpers.toChecksumAddress(
             `0x${toTokenId(input).toSolidityAddress()}`
           );
@@ -172,6 +161,120 @@ async function associateTokens(wallet) {
 }
 
 /**
+ * This function transfers tokens or HBAR to multiple recipients
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function transferTokens(wallet) {
+  const tokensAmount = [];
+  const recipients = [];
+
+  /** @type {(CurrencyAmount | TokenAmount)[]} */
+  const tokensChoices = [wallet.hbarBalance].concat(
+    wallet.tokensBalance.filter((tokenBalance) => tokenBalance.greaterThan("0"))
+  );
+
+  /**
+   * This function convert an input to
+   * @param {number} input
+   * @param {CurrencyAmount | TokenAmount} tokenAmount
+   * @returns {CurrencyAmount | TokenAmount}
+   */
+  function convertToAmount(input, tokenAmount) {
+    const token =
+      tokenAmount instanceof TokenAmount
+        ? tokenAmount.token
+        : tokenAmount.currency;
+    const rawAmount = Helpers.parseUnits(input, token.decimals);
+
+    return token instanceof Token
+      ? new TokenAmount(token, rawAmount)
+      : CurrencyAmount.fromRawAmount(token, rawAmount);
+  }
+
+  while (true) {
+    const answers = await inquirer.prompt([
+      {
+        message: "Select a token",
+        type: "list",
+        name: "token",
+        choices: tokensChoices.map((tokenAmount) => {
+          const name =
+            tokenAmount instanceof TokenAmount
+              ? `${tokenAmount.token.symbol} - ${tokenAmount.token.address}`
+              : tokenAmount.currency.symbol;
+          return {
+            name: name,
+            value: tokenAmount,
+          };
+        }),
+      },
+      {
+        message: (prevAnswers) => {
+          const tokenAmount = prevAnswers.token;
+          const symbol =
+            tokenAmount instanceof TokenAmount
+              ? `${tokenAmount.token.symbol}`
+              : tokenAmount.currency.symbol;
+
+          return `${symbol} balance: ${tokenAmount.toExact()}, Enter with amount to transfer: `;
+        },
+        name: "amount",
+        type: "number",
+        validate: (input, prevAnswers) => {
+          if (input instanceof CurrencyAmount) {
+            return true;
+          }
+          const rawAmount = convertToAmount(input, prevAnswers.token);
+          // HBAR is gas token, so we can't send all hbar in transfer
+          const bool =
+            rawAmount instanceof TokenAmount
+              ? !prevAnswers.token.lessThan(rawAmount)
+              : prevAnswers.token.greaterThan(rawAmount);
+          return (input > 0 && bool) || "Invalid input.";
+        },
+        transformer: (input) => {
+          return isNaN(input) || input <= 0 ? "" : input;
+        },
+      },
+      {
+        message: "Enter with recipient address: ",
+        name: "recipient",
+        type: "input",
+        validate: validadeAddress,
+      },
+      {
+        message: (prevAnswers) => {
+          const recipient = prevAnswers.recipient;
+          const name =
+          prevAnswers.token instanceof TokenAmount
+              ? `${prevAnswers.token.token.symbol} - ${prevAnswers.token.token.address}`
+              : prevAnswers.token.currency.symbol;
+          return `Confirm to transfer ${prevAnswers.amount} ${name} to ${recipient}?`;
+        },
+        name: "confirmTransfer",
+        type: "confirm",
+      },
+      {
+        message: "Transfer more tokens?",
+        name: "continue",
+        type: "confirm",
+      },
+    ]);
+
+    if (answers.confirmTransfer) {
+      tokensAmount.push(convertToAmount(answers.amount, answers.token));
+      recipients.push(answers.recipient);
+    }
+
+    if (!answers.continue) {
+      break;
+    }
+  }
+
+  await wallet.transferTokens(tokensAmount, recipients)
+}
+
+/**
  *
  * @param {ChainId} chainId
  * @param {HederaMultisigWallet | HederaWallet} wallet
@@ -191,7 +294,7 @@ async function walletOptions(wallet) {
   };
 
   const [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
-
+  console.log("---------------------------------")
   const questions = generateQuestions(wallet);
 
   while (true) {
@@ -199,7 +302,11 @@ async function walletOptions(wallet) {
 
     switch (answer.category) {
       case "walletInfo":
-        console.log(`HBAR balance:  ${wallet.hbarBalance.toExact()}`);
+        console.log(
+          `${
+            wallet.hbarBalance.currency.symbol
+          } balance:  ${wallet.hbarBalance.toExact()}`
+        );
         console.log(
           `Last transaction: https://hashscan.io/${wallet.chain}/transaction/${wallet.transaction}`
         );
@@ -220,9 +327,14 @@ async function walletOptions(wallet) {
         break;
       case "asssociateToken":
         await associateTokens(wallet);
+        await fetchWalletInfo();
+        break;
+      case "transferToken":
+        await transferTokens(wallet);
+        await fetchWalletInfo();
         break;
       case "exit":
-        console.log("Closing...");
+        console.log(chalk.gray("Closing..."));
         process.exit(0);
       default:
         console.log(chalk.red("Invalid option."));

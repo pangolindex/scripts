@@ -16,6 +16,7 @@ const {
   CAVAX,
   TokenAmount,
   Token,
+  JSBI,
 } = require("@pangolindex/sdk");
 const { HederaFetcher } = require("./fetcher");
 const Helpers = require("../core/helpers");
@@ -115,98 +116,54 @@ class Wallet {
   }
 
   /**
-   * This function send a HBAR amount to account
-   * @param {string} recipient Address to send the HBAR
-   * @param {number} amount Amount of HBAR to send
-   */
-  async transferHBAR(recipient, amount) {
-    const recipientId = toAccountId(recipient);
-    // Create a transaction to transfer HBAR to recipient
-    const transaction = new TransferTransaction()
-      .addHbarTransfer(this.accountId, new Hbar(amount * -1))
-      .addHbarTransfer(recipientId, new Hbar(amount));
-
-    const txId = await this.sendTransaction(transaction);
-    if (txId) {
-      console.log(
-        chalk.green(
-          `Success to Transfer ${amount.toString()} HBAR to ${recipientId.toString()}.`
-        )
-      );
-    }
-  }
-
-  /**
-   * This function send a HBAR amount to multiple accounts
-   * @param {string[]} recipients Array of address to send the HBAR
-   * @param {number[]} amounts Array of amount of HBAR to send
-   */
-  async transferHBARToMupliple(recipients, amounts) {
-    // Create a transaction to transfer HBAR to recipients
-    const transaction = new TransferTransaction();
-    let message = "Success to Transfer: \n";
-    for (let index = 0; index < recipients.length; index++) {
-      const recipientId = toAccountId(recipients[index]);
-      const amount = amounts[index];
-      transaction
-        .addHbarTransfer(this.accountId, new Hbar(-amount))
-        .addHbarTransfer(recipientId, new Hbar(amount));
-      message += `${amount.toString()} HBAR to ${recipientId.toString()}; \n`;
-    }
-
-    const txId = await this.sendTransaction(transaction);
-    if (txId) {
-      console.log(chalk.green(message));
-    }
-  }
-
-  /**
-   * This function send a token amount to account
-   * @param {string} tokenAddress
-   * @param {string} recipient
-   * @param {number} amount
-   */
-  async transferToken(tokenAddress, recipient, amount) {
-    const recipientId = toAccountId(recipient);
-    const tokenId = toTokenId(tokenAddress);
-    // Create a transaction to transfer Token to recipient
-    const transaction = new TransferTransaction()
-      .addTokenTransfer(tokenId, this.accountId, -amount)
-      .addTokenTransfer(tokenId, recipientId, amount);
-
-    const txId = await this.sendTransaction(transaction);
-    if (txId) {
-      console.log(
-        chalk.green(
-          `Success to Transfer ${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}.`
-        )
-      );
-      return txId;
-    }
-    return null;
-  }
-
-  /**
-   * This function send multiple tokens amounts to multiple accounts
-   * @param {string[]} tokenAddresses
+   * This function send multiple tokens/HBAR amounts to multiple accounts
+   * @param {(TokenAmount | CurrencyAmount)[]} tokensAmount
    * @param {string[]} recipients
-   * @param {number[]} amounts
+   * @throws Throw an error when the arrays lengths not is same.
    */
-  async transferTokenToMultiple(tokenAddresses, recipients, amounts) {
+  async transferTokens(tokensAmount, recipients) {
+    if (tokensAmount.length !== recipients.length) {
+      throw new Error("The lengh of tokensAmount not is same of recipients");
+    }
+
     // Create a transaction to transfer Token to recipient
     const transaction = new TransferTransaction();
-    let message = "Success to Transfer: \n";
-    for (let index = 0; index < tokenAddresses.length; index++) {
-      const amount = amounts[index];
+    for (let index = 0; index < tokensAmount.length; index++) {
+      const tokenAmount = tokensAmount[index];
       const recipientId = toAccountId(recipients[index]);
-      const tokenId = toTokenId(tokenAddresses[index]);
-      transaction
-        .addTokenTransfer(tokenId, this.accountId, -amount)
-        .addTokenTransfer(tokenId, recipientId, amount);
-      message += `${amount.toString()} ${tokenId.toString()} to ${recipientId.toString()}; \n`;
+      if (tokenAmount instanceof TokenAmount) {
+        const tokenId = toTokenId(tokenAmount.token);
+        transaction
+          .addTokenTransfer(
+            tokenId,
+            this.accountId,
+            JSBI.toNumber(tokenAmount.raw) * -1
+          )
+          .addTokenTransfer(
+            tokenId,
+            recipientId,
+            JSBI.toNumber(tokenAmount.raw)
+          );
+      } else {
+        transaction
+          .addHbarTransfer(this.accountId, JSBI.toNumber(tokenAmount.raw) * -1)
+          .addHbarTransfer(recipientId, JSBI.toNumber(tokenAmount.raw));
+      }
     }
+
     const txId = await this.sendTransaction(transaction);
+
     if (txId) {
+      let message = "Success to Transfer: \n";
+      for (let index = 0; index < tokensAmount.length; index++) {
+        const recipientId = toAccountId(recipients[index]);
+        const tokenAmount = tokensAmount[index];
+        const symbol =
+          tokenAmount instanceof TokenAmount
+            ? tokenAmount.token.symbol
+            : tokenAmount.currency.symbol;
+        message += `${tokenAmount.toExact()} ${symbol} to ${recipientId.toString()}; \n`;
+      }
       console.log(chalk.green(message));
       return txId;
     }
@@ -245,6 +202,7 @@ class Wallet {
    * @param {string} pangoChefAddress Address of pangochef
    * @param {number[]} poolsIds Array of pool ids
    * @param {number[]} newWeights Array with new weights of each pool
+   * @throws Throw an error when the arrays lengths not is same.
    */
   async setWeights(pangoChefAddress, poolsIds, newWeights) {
     if (poolsIds.length !== newWeights.length) {
@@ -634,9 +592,7 @@ class HederaWallet extends Wallet {
 
     this.client.setOperator(this.accountId, privateKey);
 
-    console.log(
-      chalk.green("Connected to multisig:", this.accountId.toString())
-    );
+    console.log(chalk.green("Connected to wallet:", this.accountId.toString()));
   }
 }
 

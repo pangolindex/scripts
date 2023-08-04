@@ -117,6 +117,10 @@ const Helpers = {
         return arr;
     },
 
+    parseUnits: (amount, units) => {
+        return amount * (10 ** units);
+    },
+
     getTokenCached: async (address, chainId) => {
         if (Helpers.tokens[address]) return Helpers.tokens[address];
 
