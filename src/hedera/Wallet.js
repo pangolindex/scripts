@@ -113,7 +113,9 @@ class Wallet {
             .join(", ")}.`
         )
       );
+      return txId;
     }
+    return null
   }
 
   /**

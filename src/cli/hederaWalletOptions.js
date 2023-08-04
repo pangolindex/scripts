@@ -191,7 +191,8 @@ async function associateTokens(wallet) {
   );
   const tokens = tokensAddresses.map((address) => tokensMap[address]);
 
-  await wallet.tokenAssociate(tokens);
+  const txId = await wallet.tokenAssociate(tokens);
+  return !!txId;
 }
 
 /**
@@ -287,7 +288,8 @@ async function transferTokens(wallet) {
     }
   }
 
-  await wallet.transferTokens(tokensAmount, recipients);
+  const txId = await wallet.transferTokens(tokensAmount, recipients);
+  return !!txId;
 }
 
 /**
@@ -350,7 +352,7 @@ async function walletOptions(wallet) {
 
   while (true) {
     const answer = await inquirer.prompt(questions);
-
+    let success = false;
     switch (answer.category) {
       case "walletInfo":
         console.log(
@@ -377,15 +379,19 @@ async function walletOptions(wallet) {
         console.log("\n");
         break;
       case "asssociateToken":
-        await associateTokens(wallet);
-        await fetchWalletInfo();
+        success = await associateTokens(wallet);
+        if(success){
+          await fetchWalletInfo();
+        }
         break;
       case "transferToken":
-        await transferTokens(wallet);
-        await fetchWalletInfo();
+        success = await transferTokens(wallet);
+        if(success){
+          await fetchWalletInfo();
+        }
         break;
       case "wrap":
-        const success = await wrapHBAR(wallet);
+        success = await wrapHBAR(wallet);
         if(success){
           await fetchWalletInfo();
         }
