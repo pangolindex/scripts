@@ -580,6 +580,8 @@ class Wallet {
 class HederaMultisigWallet extends Wallet {
   /**@type {string} Address of multisig wallet in EVM format*/
   address;
+  /**@type {userAccountId} User connected to multisig*/
+  userAccountId;
 
   /**
    * @constructor
@@ -592,8 +594,8 @@ class HederaMultisigWallet extends Wallet {
 
     this.accountId = AccountId.fromSolidityAddress(this.address);
 
-    const userAccountId = toAccountId(account);
-    this.client.setOperator(userAccountId, privateKey);
+    this.userAccountId = toAccountId(account);
+    this.client.setOperator(this.userAccountId, privateKey);
   }
 }
 

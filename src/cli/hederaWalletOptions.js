@@ -177,7 +177,7 @@ async function associateTokens(wallet) {
  */
 async function walletOptions(wallet) {
   console.log("Initializing wallet, please wait.");
-  
+
   const fetchFarm = async () => {
     console.log("Fetching farms...");
     const farms = await getFarms(wallet.chainId);
@@ -211,9 +211,11 @@ async function walletOptions(wallet) {
         if (tokensBalance.length > 0) {
           console.table(tokensBalance);
         }
+        console.log("\n");
         break;
       case "listFarms":
         showFarmsFriendly(farms);
+        console.log("\n");
         break;
       case "asssociateToken":
         await associateTokens(wallet);

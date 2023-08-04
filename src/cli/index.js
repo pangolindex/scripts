@@ -1,6 +1,15 @@
 const inquirer = require("inquirer");
+const chalk = require("chalk");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils.js");
-const { ALL_CHAINS, ChainId, CHAINS, ChefType, NetworkType } = require("@pangolindex/sdk");
+const {
+  ALL_CHAINS,
+  ChainId,
+  CHAINS,
+  ChefType,
+  NetworkType,
+} = require("@pangolindex/sdk");
+const { walletOptions, validadeAddress } = require("./hederaWalletOptions.js");
+const { HederaWallet, HederaMultisigWallet } = require("../hedera/Wallet.js");
 
 const chains = ALL_CHAINS.filter((chain) => chain.pangolin_is_live);
 
@@ -39,15 +48,20 @@ async function main() {
             short: "🡓 Minichef",
           });
 
-        CHAINS[answers.chain].network_type === NetworkType.HEDERA && _choices.push({
-          name: "🡒 Hedera Wallet",
-          value: "HEDERA WALLET",
-          short: "🡓 Hedera Wallet",
-        }, {
-          name: "🡒 Hedera Multisig",
-          value: "HEDERAMULTISIG",
-          short: "🡓 Hedera Multisig",
-        })
+        CHAINS[answers.chain].network_type === NetworkType.HEDERA &&
+          _choices.push(
+            new inquirer.Separator(),
+            {
+              name: "🡒 Hedera Wallet",
+              value: "HEDERAWALLET",
+              short: "🡓 Hedera Wallet",
+            },
+            {
+              name: "🡒 Hedera Multisig",
+              value: "HEDERAWALLETMULTISIG",
+              short: "🡓 Hedera Multisig",
+            }
+          );
 
         return _choices;
       },
@@ -85,6 +99,31 @@ async function main() {
   ];
 
   const answers = await inquirer.prompt(questions);
+
+  if (answers.category.startsWith("HEDERAWALLET")) {
+    let wallet;
+    if (answers.category === "HEDERAWALLETMULTISIG") {
+      const addressAnswer = await inquirer.prompt({
+        type: "input",
+        name: "address",
+        message: "Enter with multisig wallet address",
+        validate: validadeAddress,
+      });
+      wallet = new HederaMultisigWallet(addressAnswer.address, answers.chain);
+      console.log(
+        chalk.green(
+          `Connected to admin account: ${wallet.userAccountId.toString()}`
+        )
+      );
+      console.log(chalk.green("Connected to multisig:", wallet.accountId.toString()));
+    } else {
+      wallet = new HederaWallet(answers.chain);
+      console.log(
+        chalk.green(`Connected with: ${wallet.accountId.toString()}`)
+      );
+    }
+    await walletOptions(wallet);
+  }
 
   if (answers.pangochef?.startsWith("LISTPANGO")) {
     const farms = await getFarms(answers.chain);
