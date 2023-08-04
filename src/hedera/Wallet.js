@@ -115,7 +115,7 @@ class Wallet {
       );
       return txId;
     }
-    return null
+    return null;
   }
 
   /**
@@ -246,7 +246,7 @@ class Wallet {
     const transaction = new ContractExecuteTransaction()
       .setContractId(whbarContractId)
       .setFunction("deposit")
-      .setPayableAmount(amount.raw.toString())
+      .setPayableAmount(Hbar.fromTinybars(amount.raw.toString()))
       .setGas(100_000);
 
     const txId = await this.sendTransaction(transaction);
@@ -568,7 +568,7 @@ class HederaMultisigWallet extends Wallet {
     this.accountId = AccountId.fromSolidityAddress(this.address);
 
     const userAccountId = toAccountId(account);
-    this.client.setOperator(this.userAccountId, privateKey);
+    this.client.setOperator(userAccountId, PrivateKey.fromString(privateKey));
 
     console.log(
       chalk.green("Connected to admin account:", userAccountId.toString())
@@ -593,7 +593,7 @@ class HederaWallet extends Wallet {
 
     this.accountId = toAccountId(account);
 
-    this.client.setOperator(this.accountId, privateKey);
+    this.client.setOperator(this.accountId, PrivateKey.fromString(privateKey));
 
     console.log(chalk.green("Connected to wallet:", this.accountId.toString()));
   }

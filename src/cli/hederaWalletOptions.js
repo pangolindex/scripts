@@ -7,7 +7,7 @@ const {
 } = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
-const { isValidAddress, toTokenId } = require("../hedera/utils");
+const { isValidAddress, toTokenId, tokenAddressToContractAddress } = require("../hedera/utils");
 const inquirer = require("inquirer");
 const Helpers = require("../core/helpers");
 const chalk = require("chalk");
@@ -316,14 +316,15 @@ async function wrapHBAR(wallet) {
     },
   });
 
-  const whbarAddress = chain.contracts?.wrapped_native_token;
-  if (!whbarAddress) {
+  const whbarTokenAddress = chain.contracts?.wrapped_native_token;
+  if (!whbarTokenAddress) {
     console.log(chalk.red("Error, this don't have wrapped contract!"));
     return false;
   }
 
+  const whbarContractAddress = tokenAddressToContractAddress(whbarTokenAddress);
   const amount = convertToAmount(answer.amount, wallet.hbarBalance);
-  const txId = await wallet.wrap(whbarAddress, amount);
+  const txId = await wallet.wrap(whbarContractAddress, amount);
   return !!txId;
 }
 
@@ -381,18 +382,21 @@ async function walletOptions(wallet) {
       case "asssociateToken":
         success = await associateTokens(wallet);
         if(success){
+          await Helpers.sleep(1000);
           await fetchWalletInfo();
         }
         break;
       case "transferToken":
         success = await transferTokens(wallet);
         if(success){
+          await Helpers.sleep(1000);
           await fetchWalletInfo();
         }
         break;
       case "wrap":
         success = await wrapHBAR(wallet);
         if(success){
+          await Helpers.sleep(1000);
           await fetchWalletInfo();
         }
         break;
