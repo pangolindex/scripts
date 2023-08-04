@@ -1,4 +1,5 @@
 const { TokenId, AccountId, ContractId } = require("@hashgraph/sdk");
+const Web3 = require("web3");
 
 /**
  * This function check if the string is valid account id, 0.0.0000...
@@ -18,6 +19,18 @@ function isHederaIdValid(hederaId) {
   } else {
     return false;
   }
+}
+
+/**
+ * Check if an address is hedera adress or evm address
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isValidAddress(address) {
+  return (
+    !!isHederaIdValid(address) ||
+    Web3.utils.isAddress(address)
+  );
 }
 
 /**
@@ -130,4 +143,5 @@ module.exports = {
   tokenAddressToContractAddress,
   contractToTokenId,
   contractAddressToTokenAddress,
+  isValidAddress
 };
