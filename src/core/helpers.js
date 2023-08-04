@@ -162,11 +162,11 @@ const Helpers = {
             (address) => !Helpers.tokens[address]
         );
 
+        if (tokensAddresses.length === 0) return Helpers.tokens;
+
         const tokensContract = tokensAddresses.map(
             (address) => new web3.eth.Contract(ABI.TOKEN, address)
         );
-
-        if (tokensAddresses.length === 0) return Helpers.tokens;
 
         const _web3 = new Web3(new Web3.providers.HttpProvider(CHAINS[chainId].rpc_uri));
         const multicall = new _web3.eth.Contract(
@@ -190,7 +190,7 @@ const Helpers = {
                 tokenAddress, 
                 parseInt(tokenDecimals[0]), 
                 tokenSymbol, 
-                tokenName[0]
+                tokenName
             );
         }
 
