@@ -8,7 +8,6 @@ const {
   Hbar,
   ContractExecuteTransaction,
   ContractFunctionParameters,
-  NftId,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
 const {
@@ -16,6 +15,7 @@ const {
   CurrencyAmount,
   CAVAX,
   TokenAmount,
+  Token,
 } = require("@pangolindex/sdk");
 const { HederaFetcher } = require("./fetcher");
 const Helpers = require("../core/helpers");
@@ -91,19 +91,21 @@ class Wallet {
 
   /**
    * Function to associate with the  token
-   * @param {string[]} tokenAddresses Token address
+   * @param {Token[]} tokens Tokens instance
    */
-  async tokenAssociate(tokenAddresses) {
-    const tokenIds = tokenAddresses.map((tokenAddress) =>
-      toTokenId(tokenAddress)
-    );
+  async tokenAssociate(tokens) {
+    const tokenIds = tokens.map((token) => toTokenId(token.address));
     const transaction = new TokenAssociateTransaction();
     transaction.setAccountId(this.accountId);
     transaction.setTokenIds(tokenIds);
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(`Success to Associate to token ${tokenId.toString()}.`);
+      console.log(
+        `Success to Associate to: ${tokens
+          .map((token) => token.symbol)
+          .join(", ")}.`
+      );
     }
   }
 
@@ -544,10 +546,10 @@ class Wallet {
       walletInfo?.hbarBalance ?? 0
     );
 
-    this.transaction = walletInfo.transaction ?? "";
+    this.transaction = walletInfo?.transaction ?? "";
 
     //remove nfts from array
-    const tokens = walletInfo.tokens.filter((token) =>
+    const tokens = walletInfo?.tokens?.filter((token) =>
       tokensAssociated.includes(token.token_id)
     );
     const tokensToFetch = tokens.map((tokenInfo) =>
@@ -567,7 +569,7 @@ class Wallet {
       return new TokenAmount(token, tokenInfo.balance);
     });
 
-    console.log(`Completed in ${(Date.now() - start) / 1000} sec`);
+    console.log(`Completed the fetch of wallet info.`);
   }
 }
 
