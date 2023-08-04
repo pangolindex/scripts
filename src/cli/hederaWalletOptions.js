@@ -7,7 +7,11 @@ const {
 } = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
-const { isValidAddress, toTokenId, tokenAddressToContractAddress } = require("../hedera/utils");
+const {
+  isValidAddress,
+  toTokenId,
+  tokenAddressToContractAddress,
+} = require("../hedera/utils");
 const inquirer = require("inquirer");
 const Helpers = require("../core/helpers");
 const chalk = require("chalk");
@@ -137,6 +141,14 @@ function generateQuestions(wallet) {
     {
       name: "Queue proposal.",
       value: "queueProposal",
+    },
+    {
+      name: "Refetch wallet info.",
+      value: "refetchWalletInfo",
+    },
+    {
+      name: "Refetch farms",
+      value: "refetchFarms",
     },
     {
       name: "Exit",
@@ -330,6 +342,53 @@ async function wrapHBAR(wallet) {
 
 /**
  *
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function unwrapHBAR(wallet) {
+  const chain = CHAINS[wallet.chainId];
+
+  const whbarBalance = wallet.tokensBalance.find(
+    (tokenBalance) =>
+      tokenBalance.token.address.toLowerCase() ===
+      chain.contracts?.wrapped_native_token?.toLowerCase()
+  );
+
+  if (!whbarBalance) {
+    console.log(
+      chalk.red("Error, this account don't have wrapped token balance!")
+    );
+    return false;
+  }
+
+  const answer = await inquirer.prompt({
+    message: "Enter with amount to unWrap:",
+    name: "amount",
+    type: "number",
+    validade: (input) => {
+      const rawAmount = convertToAmount(input, wallet.hbarBalance);
+      return (
+        (input > 0 && !whbarBalance.lessThan(rawAmount)) || "Invalid input."
+      );
+    },
+    transformer: (input) => {
+      return isNaN(input) || input <= 0 ? "" : input;
+    },
+  });
+
+  const whbarContractAddress = tokenAddressToContractAddress(
+    whbarBalance.token.address
+  );
+  const amount = convertToAmount(answer.amount, whbarBalance);
+  const approveTx = await wallet.approve(whbarContractAddress, amount);
+  if (approveTx) {
+    const txId = await wallet.unwrap(whbarContractAddress, amount);
+    return !!txId;
+  }
+  return false;
+}
+
+/**
+ *
  * @param {ChainId} chainId
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
@@ -347,7 +406,7 @@ async function walletOptions(wallet) {
     await wallet.getWalletInfo();
   };
 
-  const [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
+  let [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
   console.log("---------------------------------");
   let questions = generateQuestions(wallet);
 
@@ -381,24 +440,37 @@ async function walletOptions(wallet) {
         break;
       case "asssociateToken":
         success = await associateTokens(wallet);
-        if(success){
-          await Helpers.sleep(1000);
+        if (success) {
+          await Helpers.sleep(5000);
           await fetchWalletInfo();
         }
         break;
       case "transferToken":
         success = await transferTokens(wallet);
-        if(success){
-          await Helpers.sleep(1000);
+        if (success) {
+          await Helpers.sleep(5000);
           await fetchWalletInfo();
         }
         break;
       case "wrap":
         success = await wrapHBAR(wallet);
-        if(success){
-          await Helpers.sleep(1000);
+        if (success) {
+          await Helpers.sleep(5000);
           await fetchWalletInfo();
         }
+        break;
+      case "unwrap":
+        success = await unwrapHBAR(wallet);
+        if (success) {
+          await Helpers.sleep(5000);
+          await fetchWalletInfo();
+        }
+        break;
+      case "refetchWalletInfo":
+        await fetchWalletInfo();
+        break;
+      case "refetchFarms":
+        farms = await fetchFarm();
         break;
       case "exit":
         console.log(chalk.gray("Closing..."));

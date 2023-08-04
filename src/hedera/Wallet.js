@@ -9,6 +9,7 @@ const {
   ContractExecuteTransaction,
   ContractFunctionParameters,
   PrivateKey,
+  AccountAllowanceApproveTransaction,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
 const {
@@ -260,7 +261,7 @@ class Wallet {
   /**
    * This function unwrap WHBAR in HBAR
    * @param {string} whbarAddress Address of whbar contract
-   * @param {number} amount Amount of WHBAR to unwrap
+   * @param {CurrencyAmount} amount Amount of WHBAR to unwrap
    */
   async unwrap(whbarAddress, amount) {
     const whbarContractId = toContractId(whbarAddress);
@@ -268,13 +269,43 @@ class Wallet {
       .setContractId(whbarContractId)
       .setFunction(
         "withdraw",
-        new ContractFunctionParameters().addUint256(amount)
+        new ContractFunctionParameters().addUint256(JSBI.toNumber(amount.raw))
       )
       .setGas(1000_000);
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
-      console.log(chalk.green(`Success to unwrap ${amount} WHBAR.`));
+      console.log(chalk.green(`Success to unwrap ${amount.toExact()} WHBAR.`));
+      return txId;
+    }
+    return null;
+  }
+
+  /**
+   * This function aprrove a allowance to a token
+   * @param {string} spender Address of spender
+   * @param {TokenAmount} amount Amount to approve
+   */
+  async approve(spender, amount) {
+    const tokenId = toTokenId(amount.token.address);
+    const spenderId = toAccountId(spender);
+    const transaction =
+      new AccountAllowanceApproveTransaction().approveTokenAllowance(
+        tokenId,
+        this.accountId,
+        spenderId,
+        JSBI.toNumber(amount.raw)
+      );
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log(
+        chalk.green(
+          `Success to approve ${amount.toExact()} ${
+            amount.token.symbol
+          } to ${spenderId.toString()}.`
+        )
+      );
       return txId;
     }
     return null;
