@@ -1,21 +1,17 @@
-const { ChainId } = require("@pangolindex/sdk");
-const Web3 = require("web3").default;
+const { ChainId, TokenAmount } = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
-const { isHederaIdValid } = require("../hedera/utils");
-const inquirer = require("inquirer").default;
+const { isValidAddress, toTokenId } = require("../hedera/utils");
+const inquirer = require("inquirer");
+const Helpers = require("../core/helpers");
 
 /**
- * Check if an address is hedera adress or evm address
+ * Validade if a input is an herdera address or evm
  * @param {string} input
  * @returns {string | true}
  */
 function validadeAddress(input) {
-  return (
-    isHederaIdValid(input) ||
-    Web3.utils.isAddress(Web3.utils.toChecksumAddress(input) ?? "") ||
-    "Not is valid address."
-  );
+  return isValidAddress(input) || "Not is valid address.";
 }
 
 /**
@@ -33,7 +29,7 @@ function generateQuestions(wallet) {
       value: "listFarms",
     },
     {
-      name: "Associate a token.",
+      name: "Associate a multiple tokens.",
       value: "asssociateToken",
     },
     {
@@ -132,7 +128,47 @@ function generateQuestions(wallet) {
   };
 }
 
+/**
+ * This function receive a answers about associateTokens and associate it
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function associateTokens(wallet) {
+  const tokensAddresses = [];
+  while (true) {
+    const answers = await inquirer.prompt([
+      {
+        message: "Enter with token address: ",
+        name: "tokenAddress",
+        type: "input",
+        validate: validadeAddress,
+        transform: (input) => {
+          return Helpers.toChecksumAddress(
+            `0x${toTokenId(input).toSolidityAddress()}`
+          );
+        },
+      },
+      {
+        message: "Associate a new token?",
+        name: "continue",
+        type: "confirm",
+      },
+    ]);
 
+    tokensAddresses.push(answers.tokenAddress);
+
+    if (!answers.continue) {
+      break;
+    }
+  }
+
+  const tokensMap = await Helpers.getTokensCached(
+    tokensAddresses,
+    wallet.chainId
+  );
+  const tokens = tokensAddresses.map((address) => tokensMap[address]);
+
+  await wallet.tokenAssociate(tokens);
+}
 
 /**
  *
@@ -140,38 +176,59 @@ function generateQuestions(wallet) {
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
 async function walletOptions(wallet) {
-  const farms = await getFarms(wallet.chainId);
-  await wallet.getWalletInfo();
+  console.log("Initializing wallet, please wait.");
+  
+  const fetchFarm = async () => {
+    console.log("Fetching farms...");
+    const farms = await getFarms(wallet.chainId);
+    console.log(`Found ${farms.length} farms.`);
+    return farms;
+  };
+
+  const fetchWalletInfo = async () => {
+    await wallet.getWalletInfo();
+  };
+
+  const [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
 
   const questions = generateQuestions(wallet);
 
-  let answer = await inquirer.prompt(questions);
+  while (true) {
+    const answer = await inquirer.prompt(questions);
 
-  switch (answer.category) {
-    case "walletInfo":
-      console.log(`HBAR balance:  ${wallet.hbarBalance.toExact()}`);
-      console.log(
-        `Last transaction: https://hashscan.io/${wallet.chain}/transaction/${wallet.transaction}`
-      );
-      const tokensBalance = wallet.tokensBalance.map((tokenAmount) => ({
-        address: tokenAmount.token.address,
-        token: tokenAmount.token.symbol,
-        amount: tokenAmount.toExact(),
-      }));
-      console.table(tokensBalance);
-      break;
-    case "listFarms":
-      showFarmsFriendly(farms);
-      break;
-    case "exit":
-      console.log("Closing...");
-      process.exit(0);
-    default:
-      console.log("Invalid option.");
-      break;
+    switch (answer.category) {
+      case "walletInfo":
+        console.log(`HBAR balance:  ${wallet.hbarBalance.toExact()}`);
+        console.log(
+          `Last transaction: https://hashscan.io/${wallet.chain}/transaction/${wallet.transaction}`
+        );
+        const tokensBalance = wallet.tokensBalance.map((tokenAmount) => ({
+          address: tokenAmount.token.address,
+          token: tokenAmount.token.symbol,
+          amount: tokenAmount.toExact(),
+        }));
+
+        if (tokensBalance.length > 0) {
+          console.table(tokensBalance);
+        }
+        break;
+      case "listFarms":
+        showFarmsFriendly(farms);
+        break;
+      case "asssociateToken":
+        await associateTokens(wallet);
+        break;
+      case "exit":
+        console.log("Closing...");
+        process.exit(0);
+      default:
+        console.log("Invalid option.");
+        break;
+    }
   }
 }
 
 module.exports = {
   walletOptions,
+  validadeAddress,
 };
