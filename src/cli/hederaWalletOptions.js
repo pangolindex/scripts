@@ -4,6 +4,7 @@ const {
   CurrencyAmount,
   Token,
   CHAINS,
+  ChefType,
 } = require("@pangolindex/sdk");
 const { HederaMultisigWallet, HederaWallet } = require("../hedera/Wallet");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils");
@@ -17,11 +18,11 @@ const Helpers = require("../core/helpers");
 const chalk = require("chalk");
 
 /**
- * Validade if a input is an herdera address or evm
+ * Validate if a input is an herdera address or evm
  * @param {string} input
  * @returns {string | true}
  */
-function validadeAddress(input) {
+function validateAddress(input) {
   return isValidAddress(input) || "Not is valid address.";
 }
 
@@ -176,7 +177,7 @@ async function associateTokens(wallet) {
         message: "Enter with token address:",
         name: "tokenAddress",
         type: "input",
-        validate: validadeAddress,
+        validate: validateAddress,
         filter: (input) => {
           return Helpers.toChecksumAddress(
             `0x${toTokenId(input).toSolidityAddress()}`
@@ -269,7 +270,7 @@ async function transferTokens(wallet) {
         message: "Enter with recipient address:",
         name: "recipient",
         type: "input",
-        validate: validadeAddress,
+        validate: validateAddress,
       },
       {
         message: (prevAnswers) => {
@@ -305,7 +306,7 @@ async function transferTokens(wallet) {
 }
 
 /**
- *
+ * This function wrap hbar into whbar
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
 async function wrapHBAR(wallet) {
@@ -315,7 +316,7 @@ async function wrapHBAR(wallet) {
     message: "Enter with amount to wrap:",
     name: "amount",
     type: "number",
-    validade: (input) => {
+    validate: (input) => {
       const rawAmount = convertToAmount(input, wallet.hbarBalance);
       // HBAR is gas token, so we can't send all hbar in transfer
       return (
@@ -330,7 +331,7 @@ async function wrapHBAR(wallet) {
 
   const whbarTokenAddress = chain.contracts?.wrapped_native_token;
   if (!whbarTokenAddress) {
-    console.log(chalk.red("Error, this don't have wrapped contract!"));
+    console.log(chalk.red("Error, this chain don't have wrapped contract!"));
     return false;
   }
 
@@ -341,7 +342,7 @@ async function wrapHBAR(wallet) {
 }
 
 /**
- *
+ * This function unwrap whbar into hbar
  * @param {HederaMultisigWallet | HederaWallet} wallet
  */
 async function unwrapHBAR(wallet) {
@@ -364,7 +365,7 @@ async function unwrapHBAR(wallet) {
     message: "Enter with amount to unWrap:",
     name: "amount",
     type: "number",
-    validade: (input) => {
+    validate: (input) => {
       const rawAmount = convertToAmount(input, wallet.hbarBalance);
       return (
         (input > 0 && !whbarBalance.lessThan(rawAmount)) || "Invalid input."
@@ -385,6 +386,85 @@ async function unwrapHBAR(wallet) {
     return !!txId;
   }
   return false;
+}
+/**
+ * This function add a new farm in pangochef
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {any[]} farms
+ */
+async function addFarm(wallet, farms) {
+  const chain = CHAINS[wallet.chainId];
+
+  if (
+    !chain.contracts?.mini_chef ||
+    chain.contracts?.mini_chef?.type !== ChefType.PANGO_CHEF
+  ) {
+    console.log(chalk.red("Error, this chain don't have pangochef!"));
+    return false;
+  }
+
+  const answer = await inquirer.prompt([
+    {
+      message: "Enter with fungible token address:",
+      name: "tokenAddress",
+      type: "input",
+      validate: validateAddress,
+      filter: (input) => {
+        return Helpers.toChecksumAddress(
+          `0x${toTokenId(input).toSolidityAddress()}`
+        );
+      },
+    },
+    {
+      message: (answers) => {
+        return `Confirm to add new farm with recipient ${
+          answers.tokenAddress
+        } (estimated pid: ${farms.length + 1})?`;
+      },
+      name: "confirmAdd",
+      type: "confirm",
+    },
+  ]);
+
+  const tokenAddress = answer.tokenAddress;
+  const contractAddress = tokenAddressToContractAddress(tokenAddress);
+
+  const { token0: token0Map, token1: token1Map } =
+    await Helpers.getPairsTokensCachedViaMulticall(
+      [contractAddress],
+      wallet.chainId
+    );
+
+  const token0Address = token0Map[contractAddress];
+  const token1Address = token1Map[contractAddress];
+
+  if (!token0Address || !token1Address) {
+    console.log(chalk.red("Error, not valid pair token address."));
+    return false;
+  }
+
+  if (!answer.confirmAdd) {
+    return false;
+  }
+
+  const pangochefAddress = chain.contracts.mini_chef.address;
+
+  const tokensMap = await Helpers.getTokensCached(
+    [token0Address, token1Address],
+    wallet.chainId
+  );
+
+  console.log(
+    chalk.blue(
+      `Adding new farm with tokens ${tokensMap[token0Address].symbol} and ${tokensMap[token1Address].symbol}.`
+    )
+  );
+  const txId = await wallet.addFarm(
+    pangochefAddress,
+    tokenAddress,
+    contractAddress
+  );
+  return !!txId;
 }
 
 /**
@@ -466,6 +546,13 @@ async function walletOptions(wallet) {
           await fetchWalletInfo();
         }
         break;
+      case "addFarm":
+        success = await addFarm(wallet, farms);
+        if (success) {
+          await Helpers.sleep(5000);
+          farms = await fetchFarm();
+        }
+        break;
       case "refetchWalletInfo":
         await fetchWalletInfo();
         break;
@@ -486,5 +573,5 @@ async function walletOptions(wallet) {
 
 module.exports = {
   walletOptions,
-  validadeAddress,
+  validateAddress,
 };

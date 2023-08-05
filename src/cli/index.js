@@ -1,5 +1,4 @@
 const inquirer = require("inquirer");
-const chalk = require("chalk");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils.js");
 const {
   ALL_CHAINS,
