@@ -231,8 +231,12 @@ const Helpers = {
             const pairAddress = pairAddresses[index];
             const token0Address = tokens0Addresses[index];
             const token1Address = tokens1Addresses[index];
-            Helpers.token0Cache[pairAddress] = token0Address[0];
-            Helpers.token1Cache[pairAddress] = token1Address[0];
+            Helpers.token0Cache[pairAddress] = token0Address 
+                ? token0Address[0] 
+                : undefined;
+            Helpers.token1Cache[pairAddress] = token1Address 
+            ? token1Address[0] 
+            : undefined;
         }
 
         return {
