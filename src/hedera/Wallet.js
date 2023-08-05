@@ -282,7 +282,7 @@ class Wallet {
   }
 
   /**
-   * This function aprrove a allowance to a token
+   * This function aprove a allowance of a token
    * @param {string} spender Address of spender
    * @param {TokenAmount} amount Amount to approve
    */
@@ -334,7 +334,7 @@ class Wallet {
   }
 
   /**
-   * This function wrap hbar to whbar and fund the rewarders with whbar
+   * This function to wrap hbar in whbar and fund the rewarders with whbar
    * @param {string} whbarAddress Address of whbar contract
    * @param {string[]} rewarderAddresses Address of rewarders
    * @param {number[]} amounts Amount to fund each rewarder
@@ -369,7 +369,7 @@ class Wallet {
   }
 
   /**
-   * This function fund the rewarders with multiple tokens
+   * This function to fund the rewarders with multiple tokens
    * @param {string[]} rewarderAddresses Array of rewarders addresses
    * @param {string[][]} tokensAddresses Array of Array with address of token
    * @param {number[][]} amounts Array of Array with amount of token to fund each rewarder
@@ -411,7 +411,7 @@ class Wallet {
   }
 
   /**
-   * This function create a new propose to pangolin governance
+   * This function to create a new propose to pangolin governance
    * @param {string} governorAddress Address of governance contract
    * @param {string[]} targets Array of target addresses
    * @param {number[]} values Array of values target addresses
@@ -451,7 +451,7 @@ class Wallet {
   }
 
   /**
-   * This function execute a proposal
+   * This function to execute a proposal
    * @param {string} governorAddress Address of governance contract
    * @param {number} proposalId Id of proposal
    */
@@ -472,7 +472,7 @@ class Wallet {
   }
 
   /**
-   * This function queue a proposal to timelock
+   * This function to queue a proposal to timelock
    * @param {string} governorAddress Address of governance contract
    * @param {number} proposalId Id of proposal
    */
@@ -493,7 +493,7 @@ class Wallet {
   }
 
   /**
-   * This function cancel a proposal
+   * This function to cancel a proposal
    * @param {string} governorAddress Address of governance contract
    * @param {number} proposalId Id of proposal
    */
@@ -514,7 +514,7 @@ class Wallet {
   }
 
   /**
-   * This function vote a prosal
+   * This function to vote a prosal
    * @param {string} governorAddress Address of governance contract
    * @param {number} proposalId Id of proposal
    * @param {boolean} support If support the proposal, true for yes, false for no
@@ -539,6 +539,9 @@ class Wallet {
     }
   }
 
+  /**
+   * This function fetch the info on this wallet
+   */
   async getWalletInfo() {
     console.log("Fetching wallet info...");
 
