@@ -115,6 +115,10 @@ function generateQuestions(wallet) {
       short: "Add new rewarder.",
     },
     {
+      name: "Set weights of farms.",
+      value: "setWeights",
+    },
+    {
       name: "Fund rewarders contract with hbar, this function wrap hbar to whbar and fund the contract.",
       value: "fundRewardersHBAR",
       short: "Fund rewarders contract with hbar.",
@@ -122,10 +126,6 @@ function generateQuestions(wallet) {
     {
       name: "Fund rewarders contract with tokens.",
       value: "fundRewardersTokens",
-    },
-    {
-      name: "Set weights of farms.",
-      value: "setWeights",
     },
     {
       name: "Submit a proposal.",
@@ -468,6 +468,109 @@ async function addFarm(wallet, farms) {
 }
 
 /**
+ * This function set new weights to farms
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {import("../pangochef/utils").Farm[]} farms
+ */
+async function setFarmsWeights(wallet, farms) {
+  const pangocheftAddress =
+    CHAINS[wallet.chainId].contracts?.mini_chef?.address;
+
+  if (!pangocheftAddress) {
+    console.log(chalk.red("Error, don't have pangochef in this chain"));
+    return false;
+  }
+
+  const _farms = farms.reduce((acc, farm) => {
+    acc[farm.pid] = farm;
+    return acc;
+  }, {});
+
+  const farmsCopy = { ..._farms };
+
+  const pids = [];
+  const weights = [];
+
+  while (true) {
+    const farmsChoices = Object.values(farmsCopy);
+    const answers = await inquirer.prompt([
+      {
+        message: "Select a farm",
+        name: "farm",
+        type: "list",
+        choices: farmsChoices.map((farm) => {
+          return {
+            name: `PID: ${farm.pid} - ${farm.token0?.symbol}-${farm.token1?.symbol}`,
+            value: farm.pid,
+          };
+        }),
+      },
+      {
+        message: "Enter with new weight:",
+        name: "weight",
+        type: "number",
+      },
+      {
+        message: "Change weight from another farm?",
+        name: "continue",
+        type: "confirm",
+        when: () => {
+          return pids.length > 0 && farmsChoices.length > 1;
+        },
+      },
+    ]);
+
+    //delete from choices the selected farm
+    delete farmsCopy[answers.farm];
+    pids.push(answers.farm);
+    weights.push(answers.weight);
+
+    if (pids.length > 1 && !answers.continue) {
+      break;
+    }
+  }
+
+  const totalAllocPoints = farms.reduce((sum, { weight }) => sum + weight, 0);
+  const newTotalAllocPoints =
+    weights.reduce((sum, weight) => sum + weight, 0) +
+    Object.values(farmsCopy).reduce((sum, { weight }) => sum + weight, 0);
+
+  if (totalAllocPoints !== newTotalAllocPoints) {
+    console.log(
+      chalk.red(
+        `Error, total of new weights (${newTotalAllocPoints}) not is same of old weights (${totalAllocPoints})`
+      )
+    );
+    return false;
+  }
+
+  console.table(
+    pids.reduce((acc, pid, index) => {
+      const newWeight = weights[index];
+      const oldWeight = _farms[pid].weight;
+      acc.push({
+        pid,
+        newWeight,
+        oldWeight,
+        delta: newWeight - oldWeight,
+      });
+      return acc;
+    }, [])
+  );
+
+  const answer = await inquirer.prompt({
+    message: "Confirm to change the farm weights?",
+    name: "confirmChange",
+    type: "confirm",
+  });
+
+  if (!answer.confirmChange) return false;
+
+  const txId = await wallet.setWeights(pangocheftAddress, pids, weights);
+  return !!txId;
+}
+
+/**
  *
  * @param {ChainId} chainId
  * @param {HederaMultisigWallet | HederaWallet} wallet
@@ -548,6 +651,13 @@ async function walletOptions(wallet) {
         break;
       case "addFarm":
         success = await addFarm(wallet, farms);
+        if (success) {
+          await Helpers.sleep(5000);
+          farms = await fetchFarm();
+        }
+        break;
+      case "setWeights":
+        success = await setFarmsWeights(wallet, farms);
         if (success) {
           await Helpers.sleep(5000);
           farms = await fetchFarm();
