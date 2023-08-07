@@ -373,43 +373,26 @@ class Wallet {
   /**
    * This function to fund the rewarders with multiple tokens
    * @param {string[]} rewarderAddresses Array of rewarders addresses
-   * @param {string[][]} tokensAddresses Array of Array with address of token
-   * @param {number[][]} amounts Array of Array with amount of token to fund each rewarder
+   * @param {TokenAmount[]} amounts Array of amount to fund each rewarder
    */
-  async fundRewardersWithTokens(rewarderAddresses, tokensAddresses, amounts) {
+  async fundRewardersWithTokens(rewarderAddresses, amounts) {
     if (
-      tokensAddresses.length !== amounts.length ||
-      rewarderAddresses.length !== tokensAddresses.length ||
       rewarderAddresses.length !== amounts.length
     ) {
       throw new Error("The lengh of arrays not is same");
     }
 
-    for (let index = 0; index < rewarderAddresses.length; index++) {
-      const tokens = tokensAddresses[index];
-      const tokensAmounts = amounts[index];
-      const rewarder = rewarderAddresses[index];
-
-      if (tokens.length !== tokensAmounts.length) {
-        throw new Error("The lengh of tokens not is same of amounts");
-      }
-
-      /** @type {string[]}*/
-      const rewarderArray = new Array(tokens.length).fill(rewarder);
-
-      const txId = this.transferTokenToMultiple(
-        tokens,
-        rewarderArray,
-        tokensAmounts
-      );
-
-      if (txId) {
-        console.log(chalk.green(`Success to fund the rewarder ${rewarder}`));
-        return;
-      }
-
-      console.log(chalk.red("Error in fund rewarders with HBAR."));
+    const txId = this.transferTokens(
+      amounts,
+      rewarderAddresses,
+    );
+    if (txId) {
+      console.log(chalk.green("Success to fund the rewerders"));
+      return txId;
     }
+
+    console.log(chalk.red("Error in fund rewarders with HBAR."));
+    return null;
   }
 
   /**

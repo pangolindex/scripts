@@ -625,7 +625,7 @@ async function addRewarder(wallet, farms) {
 }
 
 /**
- *
+ * This function funds farm reward contracts with HBAR
  * @param {HederaMultisigWallet | HederaWallet} wallet
  * @param {import("../pangochef/utils").Farm[]} farms
  */
@@ -666,7 +666,7 @@ async function fundRewardersHBAR(wallet, farms) {
         }),
       },
       {
-        message: `Remain HBAR in wallet ${remainHBAR.toExact()}, Enter with HBAR amount to found:`,
+        message: `Remain HBAR in wallet ${remainHBAR.toExact()}, Enter with HBAR amount:`,
         name: "amount",
         type: "number",
         validate: (input) => {
@@ -735,6 +735,110 @@ async function fundRewardersHBAR(wallet, farms) {
     rewarders,
     amounts
   );
+  return !!txId;
+}
+
+/**
+ * This function funds farm reward contracts with tokens
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {import("../pangochef/utils").Farm[]} farms
+ */
+async function fundRewardersTokens(wallet, farms) {
+  const superFarms = farms.filter(
+    (farm) => farm.poolType === 1 && farm.rewarder !== ZERO_ADDRESS
+  );
+
+  if (superFarms.length === 0) {
+    console.log(chalk.red("Don't have superfarms on this chain."));
+    return;
+  }
+
+  const selectedFarms = [];
+  const amounts = [];
+
+  const tokens = wallet.tokensBalance.filter((balance) =>
+    balance.greaterThan(0)
+  );
+
+  while (true) {
+    const answers = await inquirer.prompt([
+      {
+        message: "Select a superfarm",
+        name: "farm",
+        type: "list",
+        choices: superFarms.map((farm) => {
+          return {
+            name: `PID: ${farm.pid} - ${farm.token0?.symbol}-${farm.token1?.symbol} = ${farm.rewarder}`,
+            value: farm,
+          };
+        }),
+      },
+      {
+        message: "Select a token",
+        name: "token",
+        type: "list",
+        choices: tokens.map((balance) => ({
+          name: `${balance.token.symbol} balance: ${balance.toExact()}`,
+          value: balance,
+        })),
+      },
+      {
+        message: (prevAnswers) => {
+          const token = prevAnswers.token.token;
+          return `Enter with ${token.symbol} amount:`;
+        },
+        name: "amount",
+        type: "number",
+        validate: (input, prevAnswers) => {
+          const rawAmount = convertToAmount(input, prevAnswers.token);
+          return (
+            (input > 0 && !prevAnswers.token.lessThan(rawAmount)) ||
+            "Invalid input."
+          );
+        },
+        transformer: (input) => {
+          return isNaN(input) || input < 0 ? "" : input;
+        },
+      },
+      {
+        message: "Fund another superfarm/ fund with another token?",
+        name: "continue",
+        type: "confirm",
+      },
+    ]);
+
+    selectedFarms.push(answers.farm);
+    amounts.push(convertToAmount(answers.amount, answers.token));
+
+    if (!answers.continue) {
+      break;
+    }
+  }
+
+  console.table(
+    selectedFarms.reduce((acc, farm, index) => {
+      const amount = amounts[index];
+      acc.push({
+        pid: farm.pid,
+        token0: farm.token0.symbol,
+        token1: farm.token1.symbol,
+        rewarder: farm.rewarder,
+        amount: `${amount.toExact()} ${amount.token.symbol}`,
+      });
+      return acc;
+    }, [])
+  );
+
+  const answer = await inquirer.prompt({
+    message: "Confirm to fund these farms?",
+    name: "confirmFund",
+    type: "confirm",
+  });
+
+  if (!answer.confirmFund) return false;
+
+  const rewarders = selectedFarms.map((farm) => farm.rewarder);
+  const txId = await wallet.fundRewardersWithTokens(rewarders, amounts);
   return !!txId;
 }
 
@@ -840,6 +944,13 @@ async function walletOptions(wallet) {
         break;
       case "fundRewardersHBAR":
         await fundRewardersHBAR(wallet, farms);
+        if (success) {
+          await Helpers.sleep(5000);
+          farms = await fetchWalletInfo();
+        }
+        break;
+      case "fundRewardersTokens":
+        await fundRewardersTokens(wallet, farms);
         if (success) {
           await Helpers.sleep(5000);
           farms = await fetchWalletInfo();
