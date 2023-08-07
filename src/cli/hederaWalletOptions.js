@@ -16,7 +16,7 @@ const {
 const inquirer = require("inquirer");
 const Helpers = require("../core/helpers");
 const chalk = require("chalk");
-
+const { ZERO_ADDRESS } = require("../../config/address.json");
 /**
  * Validate if a input is an herdera address or evm
  * @param {string} input
@@ -571,6 +571,60 @@ async function setFarmsWeights(wallet, farms) {
 }
 
 /**
+ * This function set a new rewarder to a farm
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {import("../pangochef/utils").Farm[]} farms
+ */
+async function addRewarder(wallet, farms) {
+  const pangocheftAddress =
+    CHAINS[wallet.chainId].contracts?.mini_chef?.address;
+
+  if (!pangocheftAddress) {
+    console.log(chalk.red("Error, don't have pangochef in this chain"));
+    return false;
+  }
+
+  const farmsChoice = farms
+    .filter((farm) => farm.poolType === 1 && farm.rewarder === ZERO_ADDRESS)
+    .map((farm) => ({
+      name: `PID: ${farm.pid} ${farm.token0.symbol}-${farm.token1.symbol}`,
+      value: farm,
+    }));
+  console.log(ZERO_ADDRESS)
+  const answers = await inquirer.prompt([
+    {
+      message: "Select a farm:",
+      name: "farm",
+      type: "list",
+      choices: farmsChoice,
+    },
+    {
+      message: "Enter with new rewarder contract address:",
+      name: "contractAddress",
+      type: "input",
+      validate: validateAddress,
+    },
+    {
+      message: (prevAnswers) => {
+        const farm = prevAnswers.farm;
+        return `Confirm to set ${prevAnswers.contractAddress} rewaerder to PID: ${farm.pid} ${farm.token0.symbol}-${farm.token1.symbol}`;
+      },
+      name: "confirmSetRewader",
+      type: "confirm",
+    },
+  ]);
+
+  if (!answers.confirmSetRewader) return false;
+
+  const txId = wallet.addRewarder(
+    pangocheftAddress,
+    answers.farm.pid,
+    answers.contractAddress
+  );
+  return !!txId;
+}
+
+/**
  *
  * @param {ChainId} chainId
  * @param {HederaMultisigWallet | HederaWallet} wallet
@@ -658,6 +712,13 @@ async function walletOptions(wallet) {
         break;
       case "setWeights":
         success = await setFarmsWeights(wallet, farms);
+        if (success) {
+          await Helpers.sleep(5000);
+          farms = await fetchFarm();
+        }
+        break;
+      case "addRewarder":
+        success = await addRewarder(wallet, farms);
         if (success) {
           await Helpers.sleep(5000);
           farms = await fetchFarm();

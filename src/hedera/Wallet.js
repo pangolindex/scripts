@@ -330,7 +330,9 @@ class Wallet {
     const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(chalk.green(`Success to add new rewarder to farm ${poolId}`));
+      return txId;
     }
+    return null
   }
 
   /**

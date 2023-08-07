@@ -7,7 +7,7 @@ const {
   ChefType,
   NetworkType,
 } = require("@pangolindex/sdk");
-const { walletOptions, validadeAddress } = require("./hederaWalletOptions.js");
+const { walletOptions, validateAddress } = require("./hederaWalletOptions.js");
 const { HederaWallet, HederaMultisigWallet } = require("../hedera/Wallet.js");
 
 const chains = ALL_CHAINS.filter((chain) => chain.pangolin_is_live);
@@ -106,7 +106,7 @@ async function main() {
         type: "input",
         name: "address",
         message: "Enter with multisig wallet address",
-        validate: validadeAddress,
+        validate: validateAddress,
       });
       wallet = new HederaMultisigWallet(addressAnswer.address, answers.chain);
     } else {
