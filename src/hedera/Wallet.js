@@ -19,6 +19,7 @@ const {
   TokenAmount,
   Token,
   JSBI,
+  WAVAX,
 } = require("@pangolindex/sdk");
 const { HederaFetcher } = require("./fetcher");
 const Helpers = require("../core/helpers");
@@ -332,34 +333,33 @@ class Wallet {
       console.log(chalk.green(`Success to add new rewarder to farm ${poolId}`));
       return txId;
     }
-    return null
+    return null;
   }
 
   /**
    * This function to wrap hbar in whbar and fund the rewarders with whbar
    * @param {string} whbarAddress Address of whbar contract
    * @param {string[]} rewarderAddresses Address of rewarders
-   * @param {number[]} amounts Amount to fund each rewarder
+   * @param {CurrencyAmount[]} amounts Amount to fund each rewarder
    */
   async fundRewardersWithWHBAR(whbarAddress, rewarderAddresses, amounts) {
     if (rewarderAddresses.length !== amounts.length) {
       throw new Error("The lengh of rewarders not is same of amounts");
     }
 
-    const totalWHBAR = amounts.reduce((total, amount) => total + amount, 0);
+    const totalWHBAR = amounts.reduce(
+      (total, amount) => amount.add(total),
+      CurrencyAmount.fromRawAmount(CAVAX[this.chainId], 0)
+    );
 
     const wrapTxId = await this.wrap(whbarAddress, totalWHBAR);
 
     if (wrapTxId) {
-      /** @type {string[]}*/
-      const whbarAddressArray = new Array(rewarderAddresses.length).fill(
-        whbarAddress
-      );
-
-      const txId = this.transferTokenToMultiple(
-        whbarAddressArray,
+      const wrapedToken = WAVAX[this.chainId];
+      const tokensAmounts = amounts.map(amount => new TokenAmount(wrapedToken, amount.raw))
+      const txId = this.transferTokens(
+        tokensAmounts,
         rewarderAddresses,
-        amounts
       );
       if (txId) {
         console.log(chalk.green("Success to fund the rewerders"));

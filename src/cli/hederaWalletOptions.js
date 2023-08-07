@@ -590,7 +590,7 @@ async function addRewarder(wallet, farms) {
       name: `PID: ${farm.pid} ${farm.token0.symbol}-${farm.token1.symbol}`,
       value: farm,
     }));
-  console.log(ZERO_ADDRESS)
+
   const answers = await inquirer.prompt([
     {
       message: "Select a farm:",
@@ -620,6 +620,120 @@ async function addRewarder(wallet, farms) {
     pangocheftAddress,
     answers.farm.pid,
     answers.contractAddress
+  );
+  return !!txId;
+}
+
+/**
+ *
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {import("../pangochef/utils").Farm[]} farms
+ */
+async function fundRewardersHBAR(wallet, farms) {
+  const superFarms = farms.filter(
+    (farm) => farm.poolType === 1 && farm.rewarder !== ZERO_ADDRESS
+  );
+
+  if (superFarms.length === 0) {
+    console.log(chalk.red("Don't have superfarms on this chain."));
+    return;
+  }
+
+  const _farms = superFarms.reduce((acc, farm) => {
+    acc[farm.pid] = farm;
+    return acc;
+  }, {});
+  const selectedFarms = [];
+  const amounts = [];
+
+  while (true) {
+    const farmsChoices = Object.values(_farms);
+    const remainHBAR = amounts.reduce(
+      (remain, amount) => remain.subtract(amount),
+      wallet.hbarBalance
+    );
+
+    const answers = await inquirer.prompt([
+      {
+        message: "Select a superfarm",
+        name: "farm",
+        type: "list",
+        choices: farmsChoices.map((farm) => {
+          return {
+            name: `PID: ${farm.pid} - ${farm.token0?.symbol}-${farm.token1?.symbol} = ${farm.rewarder}`,
+            value: farm,
+          };
+        }),
+      },
+      {
+        message: `Remain HBAR in wallet ${remainHBAR.toExact()}, Enter with HBAR amount to found:`,
+        name: "amount",
+        type: "number",
+        validate: (input) => {
+          const rawAmount = convertToAmount(input, wallet.hbarBalance);
+          return (
+            (input > 0 && remainHBAR.greaterThan(rawAmount)) || "Invalid input."
+          );
+        },
+        transformer: (input) => {
+          return isNaN(input) || input < 0 ? "" : input;
+        },
+      },
+      {
+        message: "Fund another superfarm?",
+        name: "continue",
+        type: "confirm",
+        when: () => {
+          return farmsChoices.length > 1;
+        },
+      },
+    ]);
+
+    //delete from choices the select farm
+    delete _farms[answers.farm.pid];
+    selectedFarms.push(answers.farm);
+    amounts.push(convertToAmount(answers.amount, wallet.hbarBalance));
+
+    if (!answers.continue) {
+      break;
+    }
+  }
+
+  console.table(
+    selectedFarms.reduce((acc, farm, index) => {
+      const amount = amounts[index];
+      acc.push({
+        pid: farm.pid,
+        token0: farm.token0.symbol,
+        token1: farm.token1.symbol,
+        rewarder: farm.rewarder,
+        amount: amount.toExact(),
+      });
+      return acc;
+    }, [])
+  );
+
+  const answer = await inquirer.prompt({
+    message: "Confirm to fund these farms?",
+    name: "confirmFund",
+    type: "confirm",
+  });
+
+  if (!answer.confirmFund) return false;
+
+  const chain = CHAINS[wallet.chainId];
+  const whbarTokenAddress = chain.contracts?.wrapped_native_token;
+  if (!whbarTokenAddress) {
+    console.log(chalk.red("Error, this chain don't have wrapped contract!"));
+    return false;
+  }
+
+  const whbarContractAddress = tokenAddressToContractAddress(whbarTokenAddress);
+  const rewarders = selectedFarms.map((farm) => farm.rewarder);
+  const txId = await wallet.fundRewardersWithWHBAR(
+    whbarContractAddress,
+    rewarders,
+    amounts
   );
   return !!txId;
 }
@@ -722,6 +836,13 @@ async function walletOptions(wallet) {
         if (success) {
           await Helpers.sleep(5000);
           farms = await fetchFarm();
+        }
+        break;
+      case "fundRewardersHBAR":
+        await fundRewardersHBAR(wallet, farms);
+        if (success) {
+          await Helpers.sleep(5000);
+          farms = await fetchWalletInfo();
         }
         break;
       case "refetchWalletInfo":
