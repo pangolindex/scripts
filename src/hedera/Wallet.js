@@ -499,7 +499,7 @@ class Wallet {
   }
 
   /**
-   * This function to vote a prosal
+   * This function to vote to a proposal
    * @param {string} governorAddress Address of governance contract
    * @param {number} proposalId Id of proposal
    * @param {boolean} support If support the proposal, true for yes, false for no

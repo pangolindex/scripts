@@ -127,21 +127,25 @@ function generateQuestions(wallet) {
       name: "Fund rewarders contract with tokens.",
       value: "fundRewardersTokens",
     },
-    {
-      name: "Submit a proposal.",
-      value: "submitProposal",
-    },
+    // {
+    //   name: "Submit a proposal.",
+    //   value: "submitProposal",
+    // },
     {
       name: "Execute a proposal.",
       value: "executeProposal",
     },
     {
-      name: "Caste vote.",
-      value: "castVote",
+      name: "Cancel a proposal.",
+      value: "cancelProposal",
     },
     {
       name: "Queue proposal.",
       value: "queueProposal",
+    },
+    {
+      name: "Vote in proposal",
+      value: "castVote",
     },
     {
       name: "Refetch wallet info.",
@@ -843,6 +847,107 @@ async function fundRewardersTokens(wallet, farms) {
 }
 
 /**
+ * This function execute a proposal
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function executeProposal(wallet) {
+  const chain = CHAINS[wallet.chainId];
+  const governorAddress = chain.contracts?.governor?.address;
+
+  if (!governorAddress) {
+    console.log(chalk.red("Don't have governance contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt({
+    message: "Enter with proposal id:",
+    name: "proposalId",
+    type: "number",
+  });
+
+  await wallet.executeProposal(governorAddress, answer.proposalId);
+}
+
+/**
+ * This function queue a proposal to timelock
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function queueProposal(wallet) {
+  const chain = CHAINS[wallet.chainId];
+  const governorAddress = chain.contracts?.governor?.address;
+
+  if (!governorAddress) {
+    console.log(chalk.red("Don't have governance contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt({
+    message: "Enter with proposal id:",
+    name: "proposalId",
+    type: "number",
+  });
+
+  await wallet.queueProposal(governorAddress, answer.proposalId);
+}
+
+/**
+ * This function cancel a proposal
+ * @param {HederaMultisigWallet | HederaWallet} wallet
+ */
+async function cancelProposal(wallet) {
+  const chain = CHAINS[wallet.chainId];
+  const governorAddress = chain.contracts?.governor?.address;
+
+  if (!governorAddress) {
+    console.log(chalk.red("Don't have governance contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt({
+    message: "Enter with proposal id:",
+    name: "proposalId",
+    type: "number",
+  });
+
+  await wallet.cancelProposal(governorAddress, answer.proposalId);
+}
+
+async function castVote(wallet) {
+  const chain = CHAINS[wallet.chainId];
+  const governorAddress = chain.contracts?.governor?.address;
+
+  if (!governorAddress) {
+    console.log(chalk.red("Don't have governance contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt([
+    {
+      message: "Enter with proposal id:",
+      name: "proposalId",
+      type: "number",
+    },
+    {
+      message: "Enter with nft id to vote:",
+      name: "nftId",
+      type: "number",
+    },
+    {
+      message: "Y for, N against",
+      name: "support",
+      type: "confirm",
+    },
+  ]);
+
+  await wallet.castVote(
+    governorAddress,
+    answer.proposalId,
+    answer.support,
+    answer.nftId
+  );
+}
+
+/**
  *
  * @param {ChainId} chainId
  * @param {HederaMultisigWallet | HederaWallet} wallet
@@ -951,10 +1056,21 @@ async function walletOptions(wallet) {
         break;
       case "fundRewardersTokens":
         await fundRewardersTokens(wallet, farms);
-        if (success) {
-          await Helpers.sleep(5000);
-          farms = await fetchWalletInfo();
-        }
+        break;
+      case "executeProposal":
+        await executeProposal(wallet);
+        break;
+      case "queueProposal":
+        await queueProposal(wallet);
+        break;
+      case "cancelProposal":
+        await cancelProposal(wallet);
+        break;
+      case "queueProposal":
+        await queueProposal(wallet);
+        break;
+      case "castVote":
+        await castVote(wallet);
         break;
       case "refetchWalletInfo":
         await fetchWalletInfo();
