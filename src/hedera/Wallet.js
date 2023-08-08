@@ -10,6 +10,7 @@ const {
   ContractFunctionParameters,
   PrivateKey,
   AccountAllowanceApproveTransaction,
+  AccountInfoQuery,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
 const {
@@ -356,11 +357,10 @@ class Wallet {
 
     if (wrapTxId) {
       const wrapedToken = WAVAX[this.chainId];
-      const tokensAmounts = amounts.map(amount => new TokenAmount(wrapedToken, amount.raw))
-      const txId = this.transferTokens(
-        tokensAmounts,
-        rewarderAddresses,
+      const tokensAmounts = amounts.map(
+        (amount) => new TokenAmount(wrapedToken, amount.raw)
       );
+      const txId = this.transferTokens(tokensAmounts, rewarderAddresses);
       if (txId) {
         console.log(chalk.green("Success to fund the rewerders"));
         return;
@@ -376,16 +376,11 @@ class Wallet {
    * @param {TokenAmount[]} amounts Array of amount to fund each rewarder
    */
   async fundRewardersWithTokens(rewarderAddresses, amounts) {
-    if (
-      rewarderAddresses.length !== amounts.length
-    ) {
+    if (rewarderAddresses.length !== amounts.length) {
       throw new Error("The lengh of arrays not is same");
     }
 
-    const txId = this.transferTokens(
-      amounts,
-      rewarderAddresses,
-    );
+    const txId = this.transferTokens(amounts, rewarderAddresses);
     if (txId) {
       console.log(chalk.green("Success to fund the rewerders"));
       return txId;
@@ -594,6 +589,13 @@ class HederaMultisigWallet extends Wallet {
     );
     console.log(
       chalk.green("Connected to multisig:", this.accountId.toString())
+    );
+  }
+
+  async listAdmins() {
+    console.log(
+      "See admins and threshold in hashcan: ",
+      `https://hashscan.io/${this.chain}/adminKey/${this.accountId.toString()}`
     );
   }
 }

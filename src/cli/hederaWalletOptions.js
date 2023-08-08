@@ -1072,6 +1072,8 @@ async function walletOptions(wallet) {
       case "castVote":
         await castVote(wallet);
         break;
+      case "listMultisigInfo":
+        await wallet.listAdmins();
       case "refetchWalletInfo":
         await fetchWalletInfo();
         break;
