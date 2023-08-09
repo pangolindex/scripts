@@ -10,7 +10,7 @@ yarn-error.log*
 node_modules/
 jspm_packages/
 .yalc/
-yalc.lock
+package-lock.json
 
 # TypeScript v1 declaration files
 typings/
