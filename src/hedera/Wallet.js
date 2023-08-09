@@ -10,7 +10,6 @@ const {
   ContractFunctionParameters,
   PrivateKey,
   AccountAllowanceApproveTransaction,
-  AccountInfoQuery,
 } = require("@hashgraph/sdk");
 const { toContractId, toAccountId, toTokenId } = require("./utils");
 const {
@@ -592,9 +591,13 @@ class HederaMultisigWallet extends Wallet {
     );
   }
 
+  /**
+   * This function redirect to hashscan to see the admins and threshold of the multisig wallet
+   * todo: implement this whithout use hashscan
+   */
   async listAdmins() {
     console.log(
-      "See admins and threshold in hashcan: ",
+      "See admins and threshold in hashscan: ",
       `https://hashscan.io/${this.chain}/adminKey/${this.accountId.toString()}`
     );
   }
@@ -607,7 +610,7 @@ class HederaMultisigWallet extends Wallet {
 class HederaWallet extends Wallet {
   /**
    * @constructor
-   * @param {ChainId} chain
+   * @param {ChainId} chainId
    */
   constructor(chainId = ChainId.HEDERA_MAINNET) {
     super(chainId);

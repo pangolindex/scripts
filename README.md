@@ -59,5 +59,8 @@ of tokenlist updates.
 ### `src/cli`
 This directory contains a cli to show farms and interact with admin functions of pangolin contracts using multisig wallet
 
+### `src/hedera`
+This directory contains scripts to interact with hedera contracts, multisig wallet and some useful functions for hedera
+
 ### `/python`
 This directory contains all scripts written in python.
