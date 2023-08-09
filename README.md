@@ -56,6 +56,8 @@ This directory contains a collection of scripts aimed at understanding on-chain 
 provide a GUI for related information. Notable functionality includes single side staking expirations and verification 
 of tokenlist updates.
 
+### `src/cli`
+This directory contains a cli to show farms and interact with admin functions of pangolin contracts using multisig wallet
+
 ### `/python`
 This directory contains all scripts written in python.
-
