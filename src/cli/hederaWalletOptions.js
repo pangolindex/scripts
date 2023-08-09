@@ -46,8 +46,9 @@ function convertToAmount(input, tokenAmount) {
 
 /**
  * @param {HederaMultisigWallet | HederaWallet} wallet
+ * @param {import("../pangochef/utils").Farm[]} farms
  */
-function generateQuestions(wallet) {
+function generateQuestions(wallet, farms) {
   const chain = CHAINS[wallet.chainId];
 
   const choices = [
@@ -117,20 +118,27 @@ function generateQuestions(wallet) {
     {
       name: "Set weights of farms.",
       value: "setWeights",
-    },
-    {
-      name: "Fund rewarders contract with hbar, this function wrap hbar to whbar and fund the contract.",
-      value: "fundRewardersHBAR",
-      short: "Fund rewarders contract with hbar.",
-    },
-    {
-      name: "Fund rewarders contract with tokens.",
-      value: "fundRewardersTokens",
-    },
-    // {
-    //   name: "Submit a proposal.",
-    //   value: "submitProposal",
-    // },
+    }
+  );
+
+  if (farms.filter((farm) => farm.rewarder !== ZERO_ADDRESS).length > 0) {
+    choices.push(
+      {
+        name: "Fund rewarders contract with hbar, this function wrap hbar to whbar and fund the contract.",
+        value: "fundRewardersHBAR",
+        short: "Fund rewarders contract with hbar.",
+      },
+      {
+        name: "Fund rewarders contract with tokens.",
+        value: "fundRewardersTokens",
+      }
+    );
+  }
+  // {
+  //   name: "Submit a proposal.",
+  //   value: "submitProposal",
+  // },
+  choices.push(
     {
       name: "Execute a proposal.",
       value: "executeProposal",
@@ -968,7 +976,7 @@ async function walletOptions(wallet) {
 
   let [farms] = await Promise.all([fetchFarm(), fetchWalletInfo()]);
   console.log("---------------------------------");
-  let questions = generateQuestions(wallet);
+  let questions = generateQuestions(wallet, farms);
 
   while (true) {
     const answer = await inquirer.prompt(questions);
@@ -1088,7 +1096,7 @@ async function walletOptions(wallet) {
         break;
     }
 
-    questions = generateQuestions(wallet);
+    questions = generateQuestions(wallet, farms);
   }
 }
 
