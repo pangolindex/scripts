@@ -65,7 +65,7 @@ We will transfer 4,300,000 PNG from Community Treasury to Pangolin Multisig`,
         NFT_ID,
     );
 
-    await tx.estimateGas({
+    const gas = await tx.estimateGas({
         from: multisigAddress,
         gas: 8000000,
     });
@@ -80,20 +80,20 @@ We will transfer 4,300,000 PNG from Community Treasury to Pangolin Multisig`,
 
     switch (multisigType) {
         case CONSTANTS.GNOSIS_MULTISIG:
-            const receipt = await gnosisMultisigPropose({
+            const gnosisMultisigReceipt = await gnosisMultisigPropose({
                 multisigAddress,
                 destination: governorPangoAddress,
                 value: 0,
                 bytecode,
             });
 
-            gasSpent.iadd(web3.utils.toBN(receipt.effectiveGasPrice).mul(web3.utils.toBN(receipt.gasUsed)));
+            gasSpent.iadd(web3.utils.toBN(gnosisMultisigReceipt.effectiveGasPrice).mul(web3.utils.toBN(gnosisMultisigReceipt.gasUsed)));
 
-            if (!receipt?.status) {
-                console.log(receipt);
+            if (!gnosisMultisigReceipt?.status) {
+                console.log(gnosisMultisigReceipt);
                 process.exit(1);
             } else {
-                console.log(`Transaction hash: ${receipt.transactionHash}`);
+                console.log(`Transaction hash: ${gnosisMultisigReceipt.transactionHash}`);
             }
             break;
         case CONSTANTS.GNOSIS_SAFE:
@@ -103,6 +103,27 @@ We will transfer 4,300,000 PNG from Community Treasury to Pangolin Multisig`,
                 value: 0,
                 bytecode,
             });
+            break;
+        case CONSTANTS.EOA:
+            const baseGasPrice = await web3.eth.getGasPrice();
+
+            console.log('Proposing via EOA ...');
+            const eoaReceipt = await tx.send({
+                from: multisigAddress,
+                gas: gas,
+                maxFeePerGas: baseGasPrice * 2,
+                maxPriorityFeePerGas: web3.utils.toWei('1', 'nano'),
+            });
+
+            gasSpent.iadd(web3.utils.toBN(eoaReceipt.effectiveGasPrice).mul(web3.utils.toBN(eoaReceipt.gasUsed)));
+
+            if (!eoaReceipt?.status) {
+                console.error(eoaReceipt);
+                process.exit(1);
+            } else {
+                console.log(`Transaction hash: ${eoaReceipt.transactionHash}`);
+            }
+
             break;
         default:
             throw new Error(`Unknown multisig type: ${multisigType}`);
