@@ -145,7 +145,7 @@ async function showFarmsFriendly(farms) {
       return farm;
     })
   );
-  console.log(`Total alloc points: ${totalAllocPoints}`);
+  console.log(`Total alloc points/weight: ${totalAllocPoints}`);
 }
 
 module.exports = {

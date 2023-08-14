@@ -1,6 +1,10 @@
 const inquirer = require("inquirer");
 const { getFarms, showFarmsFriendly } = require("../pangochef/utils.js");
 const {
+  getFarms: getMiniChefFarms,
+  showFarmsFriendly: showMinichefFarmsFriendly,
+} = require("../minichef/utils.js");
+const {
   ALL_CHAINS,
   ChainId,
   CHAINS,
@@ -95,6 +99,36 @@ async function main() {
         },
       ],
     },
+    {
+      type: "list",
+      name: "minichef",
+      message: "Select a minichef option",
+      when: (answers) => {
+        return answers.category === "MINICHEF";
+      },
+      choices: [
+        {
+          name: "List all farms.",
+          value: "LISTMINICHEF",
+          short: "List all minichef farms.",
+        },
+        {
+          name: "List active farms.",
+          value: "LISTMINICHEFACTIVE",
+          short: "List all active minichef farms.",
+        },
+        {
+          name: "List all superfarms.",
+          value: "LISTMINICHEFSUPER",
+          short: "List all minichef super farms.",
+        },
+        {
+          name: "List active superfarms.",
+          value: "LISTMINICHEFSUPERACTIVE",
+          short: "List all active minichef superfarms.",
+        },
+      ],
+    },
   ];
 
   const answers = await inquirer.prompt(questions);
@@ -113,6 +147,31 @@ async function main() {
       wallet = new HederaWallet(answers.chain);
     }
     await walletOptions(wallet);
+  }
+
+  if (answers.minichef?.startsWith("LISTMINICHEF")) {
+    const farms = await getMiniChefFarms(answers.chain);
+
+    switch (answers.minichef) {
+      case "LISTMINICHEFACTIVE":
+        showMinichefFarmsFriendly(farms.filter((farm) => farm.weight > 0));
+        break;
+      case "LISTMINICHEFSUPER":
+        showMinichefFarmsFriendly(
+          farms.filter((farm) => farm.extraRewards.length > 0)
+        );
+        break;
+      case "LISTMINICHEFSUPERACTIVE":
+        showMinichefFarmsFriendly(
+          farms.filter(
+            (farm) => farm.weight > 0 && farm.extraRewards.length > 0
+          )
+        );
+        break;
+      default:
+        showMinichefFarmsFriendly(farms);
+        break;
+    }
   }
 
   if (answers.pangochef?.startsWith("LISTPANGO")) {
