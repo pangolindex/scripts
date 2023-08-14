@@ -1,7 +1,8 @@
 const {CHAINS, ChainId} = require("@pangolindex/sdk");
 require("dotenv").config();
 
-const chain = CHAINS[ChainId.AVALANCHE];
+const chainId = ChainId.AVALANCHE;
+const chain = CHAINS[chainId];
 
 module.exports = {
 
@@ -11,5 +12,5 @@ module.exports = {
     },
 
     RPC: chain.rpc_uri,
-    CHAINID: ChainId.AVALANCHE,
+    CHAINID: chainId,
 };

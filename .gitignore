@@ -27,7 +27,6 @@ typings/
 
 # Config secrets
 .env
-config/config.js
 src/bots/ecosystem/*
 !src/bots/ecosystem/example.config.js
 
