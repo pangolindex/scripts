@@ -65,6 +65,10 @@ function generateQuestions(wallet, farms) {
       name: "Associate to multiple tokens.",
       value: "asssociateToken",
     },
+    {
+      name: "Approve token",
+      value: "approveToken",
+    },
   ];
 
   if (wallet instanceof HederaMultisigWallet) {
@@ -154,6 +158,10 @@ function generateQuestions(wallet, farms) {
     {
       name: "Vote in proposal",
       value: "castVote",
+    },
+    {
+      name: "Create new Sar position",
+      value: "createSarPosition",
     },
     {
       name: "Refetch wallet info.",
@@ -955,6 +963,95 @@ async function castVote(wallet) {
   );
 }
 
+async function approveToken(wallet) {
+  const tokensChoices = wallet.tokensBalance;
+  const answers = await inquirer.prompt([
+    {
+      message: "Select a token",
+      type: "list",
+      name: "token",
+      choices: tokensChoices.map((tokenAmount) => {
+        const name =
+          tokenAmount instanceof TokenAmount
+            ? `${tokenAmount.token.symbol} - ${tokenAmount.token.address}`
+            : tokenAmount.currency.symbol;
+        return {
+          name: name,
+          value: tokenAmount,
+        };
+      }),
+    },
+    {
+      message: (prevAnswers) => {
+        const tokenAmount = prevAnswers.token;
+        const symbol =
+          tokenAmount instanceof TokenAmount
+            ? `${tokenAmount.token.symbol}`
+            : tokenAmount.currency.symbol;
+
+        return `${symbol} balance: ${tokenAmount.toExact()}, Enter with amount to approve:`;
+      },
+      name: "amount",
+      type: "number",
+      transformer: (input) => {
+        return isNaN(input) || input <= 0 ? "" : input;
+      },
+    },
+    {
+      message: "Enter with spender address:",
+      name: "spender",
+      type: "input",
+      validate: validateAddress,
+    },
+    {
+      message: (prevAnswers) => {
+        const spender = prevAnswers.spender;
+        const name =
+          prevAnswers.token instanceof TokenAmount
+            ? `${prevAnswers.token.token.symbol} - ${prevAnswers.token.token.address}`
+            : prevAnswers.token.currency.symbol;
+        return `Confirm to approve ${prevAnswers.amount} ${name} to ${spender}?`;
+      },
+      name: "confirmApprove",
+      type: "confirm",
+    },
+  ]);
+
+  if (answers.confirmApprove) {
+    const token = answers.token;
+    const amount = answers.amount;
+    const spender = answers.spender;
+
+    const tokenAmount = convertToAmount(amount, token);
+
+    await wallet.approve(spender, tokenAmount);
+  }
+}
+
+async function createSarPosition(wallet) {
+  const chain = CHAINS[wallet.chainId];
+
+  const sarAddress = chain.contracts?.staking?.[0]?.address;
+
+  if (!sarAddress) {
+    console.log(chalk.red("Don't have sar contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt([
+    {
+      message: "Enter with amount:",
+      name: "amount",
+      type: "number",
+    },
+  ]);
+
+  await wallet.createSarPosition(
+    sarAddress,
+    Helpers.parseUnits(answer.amount, 8).toString()
+  );
+}
+
 /**
  *
  * @param {ChainId} chainId
@@ -1012,6 +1109,9 @@ async function walletOptions(wallet) {
           await Helpers.sleep(5000);
           await fetchWalletInfo();
         }
+        break;
+      case "approveToken":
+        await approveToken(wallet);
         break;
       case "transferToken":
         success = await transferTokens(wallet);
@@ -1079,6 +1179,9 @@ async function walletOptions(wallet) {
         break;
       case "castVote":
         await castVote(wallet);
+        break;
+      case "createSarPosition":
+        await createSarPosition(wallet);
         break;
       case "listMultisigInfo":
         await wallet.listAdmins();
