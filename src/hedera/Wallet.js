@@ -444,7 +444,7 @@ class Wallet {
         new ContractFunctionParameters().addUint64(proposalId)
       );
 
-    const txId = transaction.sendTransaction(transaction);
+    const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(chalk.green("Success to execute the proposal"));
     }
@@ -465,7 +465,7 @@ class Wallet {
         new ContractFunctionParameters().addUint64(proposalId)
       );
 
-    const txId = transaction.sendTransaction(transaction);
+    const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(chalk.green("Success to queue the proposal"));
     }
@@ -486,7 +486,7 @@ class Wallet {
         new ContractFunctionParameters().addUint64(proposalId)
       );
 
-    const txId = transaction.sendTransaction(transaction);
+    const txId = this.sendTransaction(transaction);
     if (txId) {
       console.log(chalk.green("Success to cancel the proposal"));
     }
@@ -509,12 +509,26 @@ class Wallet {
         new ContractFunctionParameters()
           .addUint64(proposalId)
           .addBool(support)
-          .addAddress(nftId)
+          .addUint256(nftId)
       );
 
-    const txId = transaction.sendTransaction(transaction);
+    const txId = await this.sendTransaction(transaction);
     if (txId) {
       console.log(chalk.green("Success to vote in the proposal"));
+    }
+  }
+
+  async createSarPosition(sarAddress, amount) {
+    const sarId = toContractId(sarAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(sarId)
+      .setFunction("mint", new ContractFunctionParameters().addUint256(amount))
+      .setGas(1000000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log(chalk.green("Success to create a new position"));
     }
   }
 
