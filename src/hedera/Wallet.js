@@ -421,7 +421,8 @@ class Wallet {
           .addBytesArray(datas) // datas
           .addString(description) // description
           .addInt64(nftId) // nftId
-      );
+      )
+      .setGas(1_000_000);
 
     const txId = await this.sendTransaction(transaction);
     if (txId) {
