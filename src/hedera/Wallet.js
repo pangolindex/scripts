@@ -533,6 +533,23 @@ class Wallet {
     }
   }
 
+  async increaseSarPosition(sarAddress, nftId, amount) {
+    const sarId = toContractId(sarAddress);
+
+    const transaction = new ContractExecuteTransaction()
+      .setContractId(sarId)
+      .setFunction(
+        "stake",
+        new ContractFunctionParameters().addUint256(nftId).addUint256(amount)
+      )
+      .setGas(1000000);
+
+    const txId = await this.sendTransaction(transaction);
+    if (txId) {
+      console.log(chalk.green("Success to create a new position"));
+    }
+  }
+
   /**
    * This function fetch the info on this wallet
    */
