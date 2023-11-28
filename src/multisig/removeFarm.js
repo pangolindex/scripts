@@ -13,12 +13,12 @@ const Conversion = require("../core/conversion");
 
 // Change These Variables
 // --------------------------------------------------
-const pangochefAddress = ADDRESS.SONGBIRD_PANGO_CHEF;
-const pid = 18;
-const pglAmount = Conversion.convertFloatToString(953030.184, 18);
+const pangochefAddress = ADDRESS.FLARE_PANGO_CHEF;
+const pid = 4;
+const pglAmount = Conversion.convertFloatToString(960023.547, 18);
 const multisigAddress = ADDRESS.FLARE_GNOSIS_MULTISIG_ADDRESS;
 const multisigType = CONSTANTS.GNOSIS_MULTISIG;
-const bytecodeOnly = true;
+const bytecodeOnly = false;
 // --------------------------------------------------
 
 (async () => {
@@ -28,7 +28,7 @@ const bytecodeOnly = true;
   );
 
   const pangochef = new web3.eth.Contract(ABI.PANGO_CHEF, pangochefAddress);
-  const tx = pangochef.methods.stake(pid, pglAmount);
+  const tx = pangochef.methods.withdraw(pid, pglAmount);
 
   console.log(`Encoding bytecode ...`);
   const bytecode = tx.encodeABI();
