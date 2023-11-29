@@ -44,9 +44,9 @@ const bytecodeOnly = false;
     console.log();
 
     // Execution Check
-    // await tx.estimateGas({
-    //     from: multisigAddress,
-    // });
+    await tx.estimateGas({
+        from: multisigAddress,
+    });
 
     if (bytecodeOnly) {
         console.log(`Skipping execution due to 'bytecodeOnly' config`);
