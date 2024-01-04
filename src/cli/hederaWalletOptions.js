@@ -164,6 +164,10 @@ function generateQuestions(wallet, farms) {
       value: "createSarPosition",
     },
     {
+      name: "Increase Sar position",
+      value: "increaseSarPosition",
+    },
+    {
       name: "Refetch wallet info.",
       value: "refetchWalletInfo",
     },
@@ -1052,6 +1056,36 @@ async function createSarPosition(wallet) {
   );
 }
 
+async function increaseSarPosition(wallet){
+  const chain = CHAINS[wallet.chainId];
+
+  const sarAddress = chain.contracts?.staking?.[0]?.address;
+
+  if (!sarAddress) {
+    console.log(chalk.red("Don't have sar contract on this chain!"));
+    return;
+  }
+
+  const answer = await inquirer.prompt([
+    {
+      message: "Enter with position id:",
+      name: "nftId",
+      type: "number",
+    },
+    {
+      message: "Enter with amount:",
+      name: "amount",
+      type: "number",
+    },
+  ]);
+
+  await wallet.increaseSarPosition(
+    sarAddress,
+    answer.nftId,
+    Helpers.parseUnits(answer.amount, 8).toString()
+  );
+}
+
 /**
  *
  * @param {ChainId} chainId
@@ -1182,6 +1216,9 @@ async function walletOptions(wallet) {
         break;
       case "createSarPosition":
         await createSarPosition(wallet);
+        break;
+      case "increaseSarPosition":
+        await increaseSarPosition(wallet);
         break;
       case "listMultisigInfo":
         await wallet.listAdmins();

@@ -9,7 +9,7 @@ const Web3Adapter = require('@gnosis.pm/safe-web3-lib').default;
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider(CONFIG.RPC));
 
-const safeService = new SafeServiceClient('https://safe-transaction.avalanche.gnosis.io');
+const safeService = new SafeServiceClient('https://safe-transaction-avalanche.safe.global/');
 
 const propose = async ({ multisigAddress, destination, value, bytecode }) => {
     web3.eth.accounts.wallet.add(CONFIG.WALLET.KEY);
